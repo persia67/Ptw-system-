@@ -1,0 +1,6 @@
+{
+  "name": "Permit to Work (PTW) System",
+  "description": "Safety Permit to Work (PTW) and Lockout/Tagout (LOTO) management system with Jalali date support and digital signature capabilities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
