@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ptw/status-badge";
 import { SignaturePad } from "@/components/ptw/signature-pad";
+import { SignaturePreview } from "@/components/ptw/signature-preview";
 import { PermitPrintSheet } from "@/components/ptw/permit-print";
 import { usePtwDb } from "@/lib/ptw/use-ptw";
 import { permitTypeTitle } from "@/lib/ptw/defaults";
@@ -244,11 +245,16 @@ function PermitDetail() {
                       <p className="mt-1 text-xs text-muted-foreground">توضیح: {sig.comment}</p>
                     )}
                     {sig?.signatureDataUrl && (
-                      <img
-                        src={sig.signatureDataUrl}
-                        alt={`امضای ${sig.name}`}
-                        className="mt-2 h-12 object-contain"
-                      />
+                      <div className="mt-2.5 max-w-sm">
+                        <SignaturePreview
+                          dataUrl={sig.signatureDataUrl}
+                          signerName={sig.name}
+                          role={s.roleTitle}
+                          date={toJalaliDateTime(sig.at)}
+                          heightClass="h-16"
+                          interactive={true}
+                        />
+                      </div>
                     )}
                   </li>
                 );
@@ -285,7 +291,7 @@ function PermitDetail() {
                       />
                     </div>
                   </div>
-                  <SignaturePad value={signData} onChange={setSignData} />
+                  <SignaturePad value={signData} onChange={setSignData} signerName={signName} />
                   <div className="flex flex-wrap gap-2">
                     <Button onClick={() => decide("approved")}>
                       <CheckCircle2 className="size-4" />

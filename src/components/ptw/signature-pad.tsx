@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Eraser } from "lucide-react";
+import { Eraser, Eye, Sparkles } from "lucide-react";
+import { SignaturePreview, type InkColor } from "@/components/ptw/signature-preview";
 
 export function SignaturePad({
   value,
   onChange,
+  signerName,
 }: {
   value?: string;
   onChange: (dataUrl: string | undefined) => void;
+  signerName?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const [empty, setEmpty] = useState(!value);
+  const [inkColor, setInkColor] = useState<InkColor>("navy");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -22,10 +26,10 @@ export function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.scale(ratio, ratio);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#111827";
+    ctx.strokeStyle = "#0f172a";
   }, []);
 
   const pos = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -69,15 +73,47 @@ export function SignaturePad({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="relative rounded-md border border-dashed border-input bg-card">
+    <div className="space-y-3">
+      {/* Ink color options */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-muted-foreground flex items-center gap-1">
+          <Sparkles className="size-3.5 text-blue-500" />
+          رنگ قلم خودنویس:
+        </span>
+        <div className="flex gap-1.5">
+          {(
+            [
+              ["navy", "سرمه‌ای", "bg-blue-900"],
+              ["blue", "آبی", "bg-blue-600"],
+              ["black", "مشکی", "bg-slate-900"],
+              ["emerald", "سبز", "bg-emerald-700"],
+            ] as const
+          ).map(([c, label, bg]) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setInkColor(c)}
+              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] transition-all ${
+                inkColor === c
+                  ? "ring-2 ring-primary ring-offset-1 font-bold text-foreground"
+                  : "opacity-75 hover:opacity-100 text-muted-foreground"
+              }`}
+            >
+              <span className={`size-2.5 rounded-full ${bg}`} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative rounded-md border border-dashed border-input bg-card shadow-sm transition-colors hover:border-primary/40">
         <canvas
           ref={canvasRef}
           onPointerDown={start}
           onPointerMove={move}
           onPointerUp={end}
           onPointerLeave={end}
-          className="h-32 w-full touch-none"
+          className="h-32 w-full touch-none cursor-crosshair"
         />
         {empty && (
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
@@ -85,10 +121,33 @@ export function SignaturePad({
           </span>
         )}
       </div>
-      <Button type="button" variant="ghost" size="sm" onClick={clear}>
-        <Eraser className="size-4" />
-        پاک کردن امضا
-      </Button>
+
+      <div className="flex items-center justify-between">
+        <Button type="button" variant="ghost" size="sm" onClick={clear}>
+          <Eraser className="size-4" />
+          پاک کردن امضا
+        </Button>
+      </div>
+
+      {/* Realistic Handwritten Signature Preview */}
+      {value && !empty && (
+        <div className="rounded-md border border-blue-200/80 bg-blue-50/40 p-2.5 dark:border-blue-900/50 dark:bg-blue-950/20">
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1 font-semibold text-blue-950 dark:text-blue-200">
+              <Eye className="size-3.5 text-blue-600" />
+              پیش‌نمایش واقع‌گرایانه امضا روی سند:
+            </span>
+            <span className="text-[10px] text-muted-foreground">برای بزرگ‌نمایی کلیک کنید</span>
+          </div>
+          <SignaturePreview
+            dataUrl={value}
+            signerName={signerName}
+            inkColor={inkColor}
+            showSeal={true}
+            heightClass="h-16"
+          />
+        </div>
+      )}
     </div>
   );
 }

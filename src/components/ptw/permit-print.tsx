@@ -2,6 +2,7 @@ import { toJalaliDateTime, toJalali, fa } from "@/lib/ptw/date";
 import { permitTypeTitle, STATUS_LABEL } from "@/lib/ptw/defaults";
 import { effectiveSteps } from "@/lib/ptw/workflow";
 import type { Permit, Settings } from "@/lib/ptw/types";
+import { SignaturePreview } from "@/components/ptw/signature-preview";
 
 const Cell = ({ label, value }: { label: string; value?: string }) => (
   <div className="border border-black/60 p-1.5">
@@ -209,12 +210,19 @@ export function PermitPrintSheet({ permit, settings }: { permit: Permit; setting
                   <td className="border border-black/50 p-1 text-center">
                     {sig ? (sig.decision === "approved" ? "تایید" : "رد") : ""}
                   </td>
-                  <td className="h-12 w-24 border border-black/50 p-1 text-center">
+                  <td className="h-14 w-28 border border-black/50 p-1 text-center">
                     {sig?.signatureDataUrl ? (
-                      <img
-                        src={sig.signatureDataUrl}
-                        alt="امضا"
-                        className="mx-auto h-10 object-contain"
+                      <SignaturePreview
+                        dataUrl={sig.signatureDataUrl}
+                        signerName={sig.name}
+                        role={s.roleTitle}
+                        date={toJalaliDateTime(sig.at)}
+                        showSeal={false}
+                        showBaseline={false}
+                        interactive={false}
+                        compact={true}
+                        heightClass="h-10"
+                        className="bg-transparent border-0 p-0 shadow-none"
                       />
                     ) : null}
                   </td>
