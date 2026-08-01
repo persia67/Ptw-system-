@@ -1,0 +1,55 @@
+name: Build Windows Installer (PTW System)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build & Package Windows App (.exe Installer)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (20.x LTS - High Stability)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Build Windows Installer (.exe) & Portable Executable
+        run: npx electron-builder --win nsis portable --config.directories.output=dist-win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Create Web Bundle Zip (Fallback Artifact)
+        if: always()
+        run: |
+          powershell -Command "if (Test-Path .output/public) { Compress-Archive -Path .output/public/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force }"
+        continue-on-error: true
+
+      - name: Upload Windows Artifacts for Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: PTW-System-Windows-Installer
+          path: |
+            dist-win/*.exe
+            dist-win/*.msi
+            dist-win/*.zip
+          retention-days: 30

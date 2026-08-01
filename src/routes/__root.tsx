@@ -13,6 +13,7 @@ import { HardHat, LayoutDashboard, FilePlus2, Archive, Lock, Settings2 } from "l
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { PtwProvider } from "@/lib/ptw/use-ptw";
 
 function NotFoundComponent() {
   return (
@@ -130,48 +131,51 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background">
-        <header className="no-print sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-            <Link to="/" className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
-                <HardHat className="size-5" />
-              </span>
-              <span>
-                <span className="block text-base font-bold leading-tight">
-                  سامانه مجوز کار — PTW
+    <PtwProvider>
+      <QueryClientProvider client={queryClient}>
+        <div className="min-h-screen bg-background">
+          <header className="no-print sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
+            <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+              <Link to="/" className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
+                  <HardHat className="size-5" />
                 </span>
-                <span className="block text-xs text-sidebar-foreground/70">
-                  واحد ایمنی و بهداشت حرفه‌ای
+                <span>
+                  <span className="block text-base font-bold leading-tight">
+                    سامانه مجوز کار — PTW
+                  </span>
+                  <span className="block text-xs text-sidebar-foreground/70">
+                    واحد ایمنی و بهداشت حرفه‌ای
+                  </span>
                 </span>
-              </span>
-            </Link>
-            <nav className="flex flex-wrap items-center gap-1">
-              {NAV.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  activeOptions={{ exact: item.to === "/" }}
-                  className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  activeProps={{
-                    className:
-                      "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
-                  }}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="h-1 ptw-hatch opacity-80" />
-        </header>
-        <main className="mx-auto max-w-7xl px-4 py-6">
-          <Outlet />
-        </main>
-      </div>
-      <Toaster position="top-center" dir="rtl" richColors />
-    </QueryClientProvider>
+              </Link>
+              <nav className="flex flex-wrap items-center gap-1">
+                {NAV.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    preload="intent"
+                    activeOptions={{ exact: item.to === "/" }}
+                    className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    activeProps={{
+                      className:
+                        "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
+                    }}
+                  >
+                    <item.icon className="size-4" />
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            <div className="h-1 ptw-hatch opacity-80" />
+          </header>
+          <main className="mx-auto max-w-7xl px-4 py-6">
+            <Outlet />
+          </main>
+        </div>
+        <Toaster position="top-center" dir="rtl" richColors />
+      </QueryClientProvider>
+    </PtwProvider>
   );
 }

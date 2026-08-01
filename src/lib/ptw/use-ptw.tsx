@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { loadDb, saveDb, emptyDb } from "./storage";
+import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
+import { loadDb, saveDb } from "./storage";
 import { getSharedHandle, loadSyncPrefs, syncOnce } from "./sync";
 import type { Permit, PtwDatabase, Settings } from "./types";
 
@@ -10,9 +10,23 @@ export interface SyncState {
   error: string | null;
 }
 
-export function usePtwDb() {
-  const [db, setDb] = useState<PtwDatabase>(() => emptyDb());
-  const [ready, setReady] = useState(false);
+export interface PtwContextType {
+  db: PtwDatabase;
+  ready: boolean;
+  upsertPermit: (permit: Permit) => void;
+  deletePermit: (id: string) => void;
+  updateSettings: (settings: Settings) => void;
+  replaceDb: (next: PtwDatabase) => void;
+  sync: SyncState;
+  runSync: (silent?: boolean) => Promise<void>;
+}
+
+const PtwContext = createContext<PtwContextType | null>(null);
+
+export function PtwProvider({ children }: { children: React.ReactNode }) {
+  // Load initial database state synchronously in memory for instant zero-delay tab renders
+  const [db, setDb] = useState<PtwDatabase>(() => loadDb());
+  const [ready, setReady] = useState(true);
   const [sync, setSync] = useState<SyncState>({
     connected: false,
     busy: false,
@@ -22,8 +36,6 @@ export function usePtwDb() {
   const running = useRef(false);
 
   useEffect(() => {
-    setDb(loadDb());
-    setReady(true);
     const syncLocal = () => setDb(loadDb());
     window.addEventListener("ptw-db-changed", syncLocal);
     window.addEventListener("storage", syncLocal);
@@ -67,7 +79,6 @@ export function usePtwDb() {
 
   // همگام‌سازی خودکار دوره‌ای
   useEffect(() => {
-    if (!ready) return;
     let timer: number | undefined;
     let cancelled = false;
 
@@ -93,7 +104,7 @@ export function usePtwDb() {
       if (timer) window.clearTimeout(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [ready, runSync]);
+  }, [runSync]);
 
   const pushAfterChange = useCallback(() => {
     if (loadSyncPrefs().auto) void runSync(true);
@@ -138,14 +149,38 @@ export function usePtwDb() {
     [commit, pushAfterChange],
   );
 
-  return {
-    db,
-    ready,
-    upsertPermit,
-    deletePermit,
-    updateSettings,
-    replaceDb,
-    sync,
-    runSync,
-  };
+  return (
+    <PtwContext.Provider
+      value={{
+        db,
+        ready,
+        upsertPermit,
+        deletePermit,
+        updateSettings,
+        replaceDb,
+        sync,
+        runSync,
+      }}
+    >
+      {children}
+    </PtwContext.Provider>
+  );
+}
+
+export function usePtwDb(): PtwContextType {
+  const ctx = useContext(PtwContext);
+  if (!ctx) {
+    const current = loadDb();
+    return {
+      db: current,
+      ready: true,
+      upsertPermit: () => {},
+      deletePermit: () => {},
+      updateSettings: () => {},
+      replaceDb: () => {},
+      sync: { connected: false, busy: false, lastSyncAt: null, error: null },
+      runSync: async () => {},
+    };
+  }
+  return ctx;
 }
