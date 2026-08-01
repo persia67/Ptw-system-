@@ -9,6 +9,9 @@ import {
   PauseCircle,
   XCircle,
   Archive,
+  Download,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,17 +146,63 @@ function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
+            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary border border-primary/20">
+              نسخه v1.1.0
+            </span>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {db.settings.companyName} — {db.settings.plantName}
           </p>
         </div>
-        <Button asChild size="lg">
-          <Link to="/permits/new">
-            <FilePlus2 className="size-4" />
-            صدور مجوز جدید
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-2 border-primary/30">
+            <a
+              href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Download className="size-4 text-primary" />
+              دانلود جدیدترین نسخه (v1.1.0) از گیتهاب
+            </a>
+          </Button>
+          <Button asChild size="lg">
+            <Link to="/permits/new">
+              <FilePlus2 className="size-4" />
+              صدور مجوز جدید
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Sparkles className="size-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                <ShieldCheck className="size-4 text-primary" />
+                انتشار نسخه جدید نرم‌افزار (v1.1.0) — تایید هویت امنیتی و پلمپ دیجیتال
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                ویژگی‌های جدید: احراز هویت با رمز اختصاصی PIN برای مدیران دارای حق امضا + تولید هش
+                رمزی SHA-256 یکتا برای جلوگیری از هرگونه تغییر غیرمجاز امضاها.
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            <Download className="size-3.5" />
+            دریافت فایل نصبی و ریلیز گیتهاب
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">

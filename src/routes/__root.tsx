@@ -8,7 +8,16 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { HardHat, LayoutDashboard, FilePlus2, Archive, Lock, Settings2 } from "lucide-react";
+import {
+  HardHat,
+  LayoutDashboard,
+  FilePlus2,
+  Archive,
+  Lock,
+  Settings2,
+  Download,
+  ShieldCheck,
+} from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -136,19 +145,37 @@ function RootComponent() {
         <div className="min-h-screen bg-background">
           <header className="no-print sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
             <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-              <Link to="/" className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
-                  <HardHat className="size-5" />
-                </span>
-                <span>
-                  <span className="block text-base font-bold leading-tight">
-                    سامانه مجوز کار — PTW
+              <div className="flex flex-wrap items-center gap-3">
+                <Link to="/" className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
+                    <HardHat className="size-5" />
                   </span>
-                  <span className="block text-xs text-sidebar-foreground/70">
-                    واحد ایمنی و بهداشت حرفه‌ای
-                  </span>
-                </span>
-              </Link>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold leading-tight">
+                        سامانه مجوز کار — PTW
+                      </span>
+                      <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
+                        v1.1.0
+                      </span>
+                    </div>
+                    <span className="block text-xs text-sidebar-foreground/70">
+                      واحد ایمنی و بهداشت حرفه‌ای (پلمپ دیجیتال SHA-256)
+                    </span>
+                  </div>
+                </Link>
+
+                <a
+                  href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-accent/20 border border-accent/40 px-2.5 py-1 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-accent/30"
+                  title="دانلود نسخه جدید برنامه از گیتهاب (ویندوز .exe و پکیج وب)"
+                >
+                  <Download className="size-3.5 text-accent" />
+                  <span>دانلود نسخه دسکتاپ v1.1.0</span>
+                </a>
+              </div>
               <nav className="flex flex-wrap items-center gap-1">
                 {NAV.map((item) => (
                   <Link
