@@ -11,6 +11,7 @@ import {
   Link2,
   Unlink,
   FolderOpen,
+  ShieldCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -200,6 +201,92 @@ function SettingsPage() {
               <Plus className="size-4" />
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldCheck className="size-5 text-primary" />
+            فهرست مسئولین و مدیران دارای حق امضا (همراه با رمز امنیتی PIN ضدجعل)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            برای جلوگیری از سوءاستفاده یا امضای غیرمجاز، می‌توانید برای هر مدیر یک PIN کد ۴ رقمی
+            اختصاص دهید تا هنگام امضای مجوز استعلام هویت انجام گیرد.
+          </p>
+          {(s.people || []).map((p, i) => (
+            <div
+              key={i}
+              className="grid gap-2 rounded-md border border-border p-3 text-sm sm:grid-cols-3 sm:items-end"
+            >
+              <div>
+                <Label className="text-xs">نام و نام خانوادگی</Label>
+                <Input
+                  value={p.name}
+                  onChange={(e) => {
+                    const next = [...(s.people || [])];
+                    next[i].name = e.target.value;
+                    setS({ ...s, people: next });
+                  }}
+                  maxLength={60}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">سمت سازمانی / مسئولیت</Label>
+                <Input
+                  value={p.position}
+                  onChange={(e) => {
+                    const next = [...(s.people || [])];
+                    next[i].position = e.target.value;
+                    setS({ ...s, people: next });
+                  }}
+                  maxLength={60}
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label className="text-xs">رمز امنیتی PIN (اختیاری)</Label>
+                  <Input
+                    type="password"
+                    value={p.pin || ""}
+                    placeholder="****"
+                    onChange={(e) => {
+                      const next = [...(s.people || [])];
+                      next[i].pin = e.target.value;
+                      setS({ ...s, people: next });
+                    }}
+                    maxLength={10}
+                  />
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setS({ ...s, people: s.people.filter((_, idx) => idx !== i) })}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              setS({
+                ...s,
+                people: [
+                  ...(s.people || []),
+                  { name: "مدیر جدید", position: "مسئول ایمنی", pin: "" },
+                ],
+              })
+            }
+          >
+            <Plus className="size-4" />
+            افزودن مدیر / مسئول مجاز
+          </Button>
         </CardContent>
       </Card>
 

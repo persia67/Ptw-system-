@@ -13,6 +13,9 @@ export interface StepSignature {
   comment?: string;
   signatureDataUrl?: string;
   at: string; // ISO
+  verificationHash?: string; // SHA-256 cryptographic digest
+  verifiedPin?: boolean; // آیا PIN تایید شده است؟
+  deviceSignatureToken?: string; // کد امنیتی دستگاه/مرورگر
 }
 
 export interface WorkflowStep {
@@ -143,7 +146,7 @@ export interface Settings {
   companyName: string;
   plantName: string;
   units: string[];
-  people: { name: string; position: string }[];
+  people: { name: string; position: string; pin?: string }[];
   workflow: WorkflowStep[];
   defaultDurationHours: Record<PermitTypeId, number>;
   currentUser: { name: string; position: string };

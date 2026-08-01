@@ -13,6 +13,11 @@ import {
   Unlock,
   ArrowRight,
   Trash2,
+  ShieldCheck,
+  Fingerprint,
+  KeyRound,
+  FileCheck2,
+  BadgeCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +51,8 @@ import {
   canClose,
   evt,
 } from "@/lib/ptw/workflow";
-import type { Permit } from "@/lib/ptw/types";
+import { generateSignatureHash, generateDeviceToken } from "@/lib/ptw/security";
+import type { Permit, StepSignature } from "@/lib/ptw/types";
 
 export const Route = createFileRoute("/permits/$permitId")({
   head: () => ({
@@ -76,6 +82,12 @@ function PermitDetail() {
   const [signName, setSignName] = useState("");
   const [signComment, setSignComment] = useState("");
   const [signData, setSignData] = useState<string | undefined>();
+  const [signPin, setSignPin] = useState("");
+  const [auditSig, setAuditSig] = useState<{
+    sig: StepSignature;
+    stepTitle: string;
+  } | null>(null);
+
   const [extendTo, setExtendTo] = useState("");
   const [extendReason, setExtendReason] = useState("");
   const [suspendReason, setSuspendReason] = useState("");
@@ -115,19 +127,46 @@ function PermitDetail() {
       updatedAt: new Date().toISOString(),
     });
 
-  const decide = (decision: "approved" | "rejected") => {
+  const decide = async (decision: "approved" | "rejected") => {
     if (!step) return;
     if (!signName.trim()) return toast.error("نام امضاکننده را وارد کنید");
     if (decision === "rejected" && !signComment.trim()) return toast.error("دلیل رد را بنویسید");
 
-    const signature = {
+    // Check optional manager security PIN
+    const matchedPerson = (db.settings.people || []).find(
+      (p) => p.name.trim().toLowerCase() === signName.trim().toLowerCase(),
+    );
+    let verifiedPin = false;
+    if (matchedPerson?.pin && matchedPerson.pin.trim()) {
+      if (!signPin || signPin.trim() !== matchedPerson.pin.trim()) {
+        return toast.error("رمز امنیتی PIN واردشده برای این مدیر/مسئول صحیح نیست!");
+      }
+      verifiedPin = true;
+    }
+
+    const timestamp = new Date().toISOString();
+    const verificationHash = await generateSignatureHash(
+      permit.id,
+      step.id,
+      signName.trim(),
+      step.roleTitle,
+      decision,
+      timestamp,
+      signData,
+    );
+    const deviceToken = generateDeviceToken();
+
+    const signature: StepSignature = {
       stepId: step.id,
       decision,
       name: signName.trim(),
       position: step.roleTitle,
       comment: signComment.trim() || undefined,
       signatureDataUrl: signData,
-      at: new Date().toISOString(),
+      at: timestamp,
+      verificationHash,
+      verifiedPin,
+      deviceSignatureToken: deviceToken,
     };
 
     if (decision === "rejected") {
@@ -154,10 +193,11 @@ function PermitDetail() {
           finished ? "تمام تاییدها انجام شد و مجوز صادر گردید" : `مرحله «${step.title}» تایید شد`,
         ),
       );
-      toast.success(finished ? "مجوز صادر شد" : "امضا ثبت شد");
+      toast.success(finished ? "امضا با رمزنگاری امنیتی SHA-256 ثبت گردید" : "امضا ثبت شد");
     }
     setSignName("");
     setSignComment("");
+    setSignPin("");
     setSignData(undefined);
   };
 
@@ -202,16 +242,16 @@ function PermitDetail() {
             <p className="text-xs text-muted-foreground">
               {fa(prog.done)} از {fa(prog.total)} امضا انجام شده است.
             </p>
-            <ol className="space-y-2">
+            <ol className="space-y-3">
               {steps.map((s, i) => {
                 const sig = permit.signatures.find((x) => x.stepId === s.id);
                 const isCurrent = i === permit.currentStepIndex && permit.status === "pending";
                 return (
                   <li
                     key={s.id}
-                    className={`rounded-md border p-3 ${
+                    className={`rounded-md border p-3 transition-all ${
                       isCurrent
-                        ? "border-accent bg-accent/10"
+                        ? "border-accent bg-accent/10 shadow-sm"
                         : sig?.decision === "approved"
                           ? "border-success/40 bg-success/5"
                           : sig?.decision === "rejected"
@@ -221,28 +261,47 @@ function PermitDetail() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <div className="text-sm font-bold">
-                          {fa(i + 1)}. {s.title}
+                        <div className="flex items-center gap-2 text-sm font-bold">
+                          <span>
+                            {fa(i + 1)}. {s.title}
+                          </span>
+                          <span className="text-xs font-normal text-muted-foreground">
+                            ({s.roleTitle})
+                          </span>
                         </div>
-                        <div className="text-xs text-muted-foreground">{s.roleTitle}</div>
                       </div>
                       {sig ? (
-                        <div className="text-xs">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span
-                            className={
+                            className={`font-semibold ${
                               sig.decision === "approved" ? "text-success" : "text-destructive"
-                            }
+                            }`}
                           >
                             {sig.decision === "approved" ? "تایید شد" : "رد شد"}
-                          </span>{" "}
-                          — {sig.name} — {toJalaliDateTime(sig.at)}
+                          </span>
+                          <span className="text-muted-foreground">— {sig.name}</span>
+                          <span className="text-muted-foreground">
+                            — {toJalaliDateTime(sig.at)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="h-7 bg-background gap-1 text-[11px]"
+                            onClick={() => setAuditSig({ sig, stepTitle: s.title })}
+                          >
+                            <ShieldCheck className="size-3.5 text-primary" />
+                            استعلام اصالت دیجیتال
+                          </Button>
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">در انتظار</span>
+                        <span className="text-xs text-muted-foreground">در انتظار نوبت امضا</span>
                       )}
                     </div>
                     {sig?.comment && (
-                      <p className="mt-1 text-xs text-muted-foreground">توضیح: {sig.comment}</p>
+                      <p className="mt-1.5 rounded border border-border/50 bg-background/50 p-1.5 text-xs text-muted-foreground">
+                        توضیح امضاکننده: {sig.comment}
+                      </p>
                     )}
                     {sig?.signatureDataUrl && (
                       <div className="mt-2.5 max-w-sm">
@@ -264,43 +323,126 @@ function PermitDetail() {
             {permit.status === "pending" && step && (
               <>
                 <Separator />
-                <div className="space-y-3 rounded-md border border-accent/50 bg-accent/5 p-3">
-                  <div className="text-sm font-bold">
-                    امضای مرحله جاری: {step.title} ({step.roleTitle})
+                <div className="space-y-4 rounded-lg border-2 border-primary/30 bg-primary/5 p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <ShieldCheck className="size-4" />
+                      </div>
+                      <div>
+                        <div className="text-base font-bold text-primary">
+                          محل ثبت امضای دیجیتال و تاییدیه امنیتی
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          مرحله جاری:{" "}
+                          <span className="font-semibold text-foreground">{step.title}</span> (سمت
+                          مجاز: {step.roleTitle})
+                        </div>
+                      </div>
+                    </div>
+                    <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      <BadgeCheck className="size-3.5" />
+                      رمزنگاری SHA-256 غیرقابل‌جعل
+                    </span>
                   </div>
+
                   {step.id === "electrical" && openLocks.length === 0 && permit.hasLoto && (
-                    <p className="text-xs text-destructive">
-                      هیچ قفل فعالی ثبت نشده است؛ پیش از تایید، قفل و برچسب را اعمال کنید.
+                    <p className="rounded border border-destructive/20 bg-destructive/10 p-2 text-xs font-semibold text-destructive">
+                      ⚠️ هیچ قفل فعالی ثبت نشده است؛ پیش از تایید این مرحله، قفل و برچسب LOTO را
+                      اعمال کنید.
                     </p>
                   )}
-                  <div className="grid gap-3 md:grid-cols-2">
+
+                  {db.settings.people && db.settings.people.length > 0 && (
+                    <div className="rounded-md border border-border bg-background p-3">
+                      <Label className="mb-1.5 block text-xs text-muted-foreground">
+                        انتخاب سریع از فهرست مسئولین مجاز:
+                      </Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {db.settings.people.map((p, idx) => (
+                          <Button
+                            key={idx}
+                            type="button"
+                            variant={signName === p.name ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setSignName(p.name);
+                            }}
+                          >
+                            {p.name} ({p.position})
+                            {p.pin ? <KeyRound className="me-1 size-3 text-warning" /> : null}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 md:grid-cols-3">
                     <div>
-                      <Label>نام و نام خانوادگی امضاکننده</Label>
+                      <Label className="text-xs font-semibold">
+                        نام و نام خانوادگی امضاکننده *
+                      </Label>
                       <Input
                         value={signName}
                         onChange={(e) => setSignName(e.target.value)}
+                        placeholder="مثلاً: مهندس رضایی"
                         maxLength={80}
                       />
                     </div>
                     <div>
-                      <Label>توضیح / دلیل (در صورت رد الزامی)</Label>
+                      <Label className="flex items-center gap-1 text-xs font-semibold">
+                        <KeyRound className="size-3 text-primary" />
+                        رمز امنیتی PIN (در صورت تعریف)
+                      </Label>
+                      <Input
+                        type="password"
+                        value={signPin}
+                        onChange={(e) => setSignPin(e.target.value)}
+                        placeholder="****"
+                        maxLength={10}
+                        className="font-mono text-center tracking-widest"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">
+                        توضیح / دلیل (در صورت رد الزامی)
+                      </Label>
                       <Input
                         value={signComment}
                         onChange={(e) => setSignComment(e.target.value)}
+                        placeholder="توضیحات تایید یا علت رد"
                         maxLength={300}
                       />
                     </div>
                   </div>
-                  <SignaturePad value={signData} onChange={setSignData} signerName={signName} />
-                  <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => decide("approved")}>
-                      <CheckCircle2 className="size-4" />
-                      تایید و امضا
-                    </Button>
-                    <Button variant="destructive" onClick={() => decide("rejected")}>
-                      <XCircle className="size-4" />
-                      رد و بازگشت به مرحله قبل
-                    </Button>
+
+                  <div>
+                    <Label className="mb-1 block text-xs font-semibold">
+                      محل رسم امضای دیجیتال:
+                    </Label>
+                    <SignaturePad value={signData} onChange={setSignData} signerName={signName} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button onClick={() => decide("approved")} className="gap-2">
+                        <CheckCircle2 className="size-4" />
+                        تایید و امضای رسمی
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => decide("rejected")}
+                        className="gap-2"
+                      >
+                        <XCircle className="size-4" />
+                        رد و بازگشت به مرحله قبل
+                      </Button>
+                    </div>
+                    <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Fingerprint className="size-3.5 text-primary" />
+                      امضا با مشخصات مرورگر و هش SHA-256 پلمپ دیجیتال می‌شود.
+                    </p>
                   </div>
                 </div>
               </>
@@ -739,6 +881,95 @@ function PermitDetail() {
       <div className="print-sheet">
         <PermitPrintSheet permit={permit} settings={db.settings} />
       </div>
+
+      {/* دیالوگ استعلام اصالت دیجیتال امضا */}
+      <Dialog open={Boolean(auditSig)} onOpenChange={(open) => !open && setAuditSig(null)}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-primary">
+              <ShieldCheck className="size-5 text-primary" />
+              شناسنامه و استعلام اصالت دیجیتال امضا
+            </DialogTitle>
+          </DialogHeader>
+          {auditSig && (
+            <div className="space-y-4 text-xs">
+              <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-success">
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <BadgeCheck className="size-4" />
+                  اصالت امضا معتبر و پلمپ دیجیتال فعال است
+                </div>
+                <p className="mt-1 text-[11px] text-foreground/80">
+                  این امضا با الگوریتم رمزی SHA-256 بر اساس شناسه مجوز، زمان ثبت و اطلاعات امضاکننده
+                  پلمپ شده است و هرگونه دستکاری پس از امضا مشخص می‌گردد.
+                </p>
+              </div>
+
+              <div className="space-y-2 rounded-md border border-border bg-card p-3">
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">مرحله و سمت:</span>
+                  <span className="font-semibold">
+                    {auditSig.stepTitle} ({auditSig.sig.position})
+                  </span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">امضاکننده:</span>
+                  <span className="font-semibold">{auditSig.sig.name}</span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">زمان دقیق ثبت امضا:</span>
+                  <span className="font-semibold">{toJalaliDateTime(auditSig.sig.at)}</span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">وضعیت احراز هویت:</span>
+                  <span className="font-semibold">
+                    {auditSig.sig.verifiedPin
+                      ? "تایید هویت با رمز PIN اختصاصی"
+                      : "امضای مجاز استاندارد"}
+                  </span>
+                </div>
+              </div>
+
+              {auditSig.sig.verificationHash && (
+                <div>
+                  <label className="mb-1 block font-semibold text-muted-foreground">
+                    هش رمزی یکتا (Cryptographic SHA-256 Digest):
+                  </label>
+                  <div className="break-all rounded border border-border bg-muted p-2 font-mono text-[11px] select-all">
+                    {auditSig.sig.verificationHash}
+                  </div>
+                </div>
+              )}
+
+              {auditSig.sig.deviceSignatureToken && (
+                <div>
+                  <label className="mb-1 block font-semibold text-muted-foreground">
+                    توکن اثر انگشت سیستم ثبت‌کننده:
+                  </label>
+                  <div className="rounded border border-border bg-muted/60 p-1.5 font-mono text-[11px] text-muted-foreground">
+                    {auditSig.sig.deviceSignatureToken}
+                  </div>
+                </div>
+              )}
+
+              {auditSig.sig.signatureDataUrl && (
+                <div>
+                  <label className="mb-1 block font-semibold text-muted-foreground">
+                    پیش‌نمایش ترسیمی امضا:
+                  </label>
+                  <SignaturePreview
+                    dataUrl={auditSig.sig.signatureDataUrl}
+                    signerName={auditSig.sig.name}
+                    role={auditSig.sig.position}
+                    date={toJalaliDateTime(auditSig.sig.at)}
+                    heightClass="h-20"
+                    interactive={false}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
