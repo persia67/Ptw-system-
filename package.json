@@ -1,5 +1,8 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "ptw-system",
+  "version": "1.0.0",
+  "description": "سامانه مدیریت مجوز کار PTW و LOTO واحد ایمنی و بهداشت حرفه‌ای",
+  "author": "HSE Department",
   "private": true,
   "sideEffects": false,
   "type": "module",

@@ -35,13 +35,11 @@ jobs:
         run: npx electron-builder --win nsis portable --config.directories.output=dist-win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
       - name: Create Web Bundle Zip (Fallback Artifact)
         if: always()
         run: |
-          powershell -Command "if (Test-Path .output/public) { Compress-Archive -Path .output/public/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force }"
-        continue-on-error: true
+          powershell -Command "New-Item -ItemType Directory -Force -Path dist-win; if (Test-Path .output/public) { Compress-Archive -Path .output/public/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force } else if (Test-Path dist) { Compress-Archive -Path dist/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force }"
 
       - name: Upload Windows Artifacts for Download
         uses: actions/upload-artifact@v4
