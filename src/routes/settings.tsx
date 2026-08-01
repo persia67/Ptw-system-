@@ -57,13 +57,14 @@ function SettingsPage() {
   const [newUnit, setNewUnit] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [prefs, setPrefs] = useState<SyncPrefs>(DEFAULT_SYNC_PREFS);
-  const supported = isSyncSupported();
+  const [supported, setSupported] = useState(false);
 
   useEffect(() => {
     if (ready) setS(db.settings);
   }, [ready, db.settings]);
 
   useEffect(() => {
+    setSupported(isSyncSupported());
     setPrefs(loadSyncPrefs());
     void getSharedHandle().then((h) => {
       if (h) setPrefs((p) => ({ ...p, fileName: h.name }));

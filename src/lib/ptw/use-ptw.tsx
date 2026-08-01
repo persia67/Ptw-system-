@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
-import { loadDb, saveDb } from "./storage";
+import { emptyDb, loadDb, saveDb } from "./storage";
 import { getSharedHandle, loadSyncPrefs, syncOnce } from "./sync";
 import type { Permit, PtwDatabase, Settings } from "./types";
 
@@ -24,9 +24,8 @@ export interface PtwContextType {
 const PtwContext = createContext<PtwContextType | null>(null);
 
 export function PtwProvider({ children }: { children: React.ReactNode }) {
-  // Load initial database state synchronously in memory for instant zero-delay tab renders
-  const [db, setDb] = useState<PtwDatabase>(() => loadDb());
-  const [ready, setReady] = useState(true);
+  const [db, setDb] = useState<PtwDatabase>(emptyDb);
+  const [ready, setReady] = useState(false);
   const [sync, setSync] = useState<SyncState>({
     connected: false,
     busy: false,
@@ -34,6 +33,11 @@ export function PtwProvider({ children }: { children: React.ReactNode }) {
     error: null,
   });
   const running = useRef(false);
+
+  useEffect(() => {
+    setDb(loadDb());
+    setReady(true);
+  }, []);
 
   useEffect(() => {
     const syncLocal = () => setDb(loadDb());
