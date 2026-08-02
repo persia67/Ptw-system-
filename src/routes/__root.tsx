@@ -156,11 +156,11 @@ function RootComponent() {
                         سامانه مجوز کار — PTW
                       </span>
                       <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
-                        v1.1.1
+                        v1.2.0
                       </span>
                     </div>
                     <span className="block text-xs text-sidebar-foreground/70">
-                      واحد ایمنی و بهداشت حرفه‌ای (پلمپ دیجیتال SHA-256)
+                      واحد ایمنی و بهداشت حرفه‌ای (ویندوز + اندروید)
                     </span>
                   </div>
                 </Link>
@@ -170,10 +170,10 @@ function RootComponent() {
                   target="_blank"
                   rel="noreferrer"
                   className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-accent/20 border border-accent/40 px-2.5 py-1 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-accent/30"
-                  title="دانلود نسخه جدید برنامه از گیتهاب (ویندوز .exe و پکیج وب)"
+                  title="دانلود نسخه‌های ویندوز (.exe) و اندروید (.apk) از گیتهاب"
                 >
                   <Download className="size-3.5 text-accent" />
-                  <span>دانلود نسخه دسکتاپ v1.1.1</span>
+                  <span>دانلود نسخه v1.2.0 (ویندوز و اندروید)</span>
                 </a>
               </div>
               <nav className="flex flex-wrap items-center gap-1">

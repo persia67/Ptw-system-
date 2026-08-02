@@ -1,0 +1,8 @@
+{
+  "appId": "com.ptw.system",
+  "appName": "PTW System",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,4 +1,4 @@
-name: Build Windows Installer (PTW System)
+name: Build Android APK (PTW System)
 
 on:
   push:
@@ -15,9 +15,9 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    name: Build & Package Windows App (.exe Installer)
-    runs-on: windows-latest
+  build-android:
+    name: Build & Package Android App (.apk)
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Source Code
@@ -28,23 +28,35 @@ jobs:
         with:
           node-version: "22.x"
 
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
       - name: Install Dependencies
         run: npm install
 
       - name: Build Web Application
         run: npm run build
 
-      - name: Build Windows Installer (.exe) & Portable Executable
-        run: npx electron-builder --win nsis portable --config.directories.output=dist-win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Web Bundle Zip (Fallback Artifact)
-        if: always()
+      - name: Add and Sync Capacitor Android
         run: |
-          powershell -Command "New-Item -ItemType Directory -Force -Path dist-win; if (Test-Path .output/public) { Compress-Archive -Path .output/public/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force } else { if (Test-Path dist) { Compress-Archive -Path dist/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force } }"
+          npx cap add android || true
+          npx cap sync android
 
-      - name: Create GitHub Release & Upload Files
+      - name: Build Android APK with Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Prepare APK Output
+        run: |
+          mkdir -p dist-android
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.0.apk
+
+      - name: Create GitHub Release & Upload Android APK
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         with:
@@ -57,18 +69,14 @@ jobs:
             - 🔐 احراز هویت با رمز اختصاصی PIN برای مسئولین و مدیران مجاز
             - 🛡️ هش رمزی یکتا SHA-256 و پلمپ دیجیتال امضاها
           files: |
-            dist-win/*.exe
-            dist-win/*.msi
-            dist-win/*.zip
+            dist-android/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Windows Artifacts for Download
+      - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PTW-System-Windows-Installer
+          name: PTW-System-Android-APK
           path: |
-            dist-win/*.exe
-            dist-win/*.msi
-            dist-win/*.zip
+            dist-android/*.apk
           retention-days: 30

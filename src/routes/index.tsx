@@ -149,7 +149,7 @@ function Dashboard() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
             <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary border border-primary/20">
-              نسخه v1.1.1
+              نسخه v1.2.0
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ function Dashboard() {
               rel="noreferrer"
             >
               <Download className="size-4 text-primary" />
-              دانلود جدیدترین نسخه (v1.1.1) از گیتهاب
+              دانلود جدیدترین نسخه v1.2.0 (اندروید و ویندوز)
             </a>
           </Button>
           <Button asChild size="lg">
@@ -185,11 +185,11 @@ function Dashboard() {
             <div>
               <div className="flex items-center gap-2 text-sm font-bold text-foreground">
                 <ShieldCheck className="size-4 text-primary" />
-                انتشار نسخه جدید نرم‌افزار (v1.1.1) — تایید هویت امنیتی و رفع خطای اجرا
+                انتشار نسخه جدید v1.2.0 — کامپایل خودکار نسخه اندروید (.apk) در گیتهاب
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                ویژگی‌های جدید: رفع خطای اجرای الکترون دسکتاپ + احراز هویت با رمز اختصاصی PIN برای
-                مدیران دارای حق امضا + پلمپ دیجیتال SHA-256.
+                ویژگی‌های جدید: افزودن گردش کار کامپایل خودکار نسخه اندروید (APK) و نسخه دسکتاپ
+                ویندوز (EXE) با پلمپ دیجیتال SHA-256 و احراز هویت با رمز اختصاصی PIN.
               </p>
             </div>
           </div>
@@ -200,7 +200,7 @@ function Dashboard() {
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
             <Download className="size-3.5" />
-            دریافت فایل نصبی و ریلیز گیتهاب
+            دانلود فایل نصبی (APK و EXE)
           </a>
         </div>
       </div>
