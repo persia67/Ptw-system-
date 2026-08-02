@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -13,6 +14,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -21,15 +23,22 @@ function createWindow() {
   if (isDev && process.env.ELECTRON_START_URL) {
     mainWindow.loadURL(process.env.ELECTRON_START_URL);
   } else {
-    // Standard static build location
-    const distPath = path.join(__dirname, "../.output/public/index.html");
-    const fallbackPath = path.join(__dirname, "../dist/index.html");
+    const candidates = [
+      path.join(__dirname, "../dist/index.html"),
+      path.join(__dirname, "../.output/public/index.html"),
+      path.join(app.getAppPath(), "dist/index.html"),
+      path.join(app.getAppPath(), ".output/public/index.html"),
+    ];
 
-    mainWindow.loadFile(distPath).catch(() => {
-      mainWindow.loadFile(fallbackPath).catch((err) => {
+    const target = candidates.find((p) => fs.existsSync(p));
+
+    if (target) {
+      mainWindow.loadFile(target).catch((err) => {
         console.error("Failed to load local HTML entry:", err);
       });
-    });
+    } else {
+      console.error("No valid index.html found. Tried candidates:", candidates);
+    }
   }
 }
 

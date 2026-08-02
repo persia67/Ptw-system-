@@ -54,17 +54,18 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p dist-android
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.0.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.1.apk
 
       - name: Create GitHub Release & Upload Android APK
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: v1.2.0
-          name: PTW System Release v1.2.0 (Windows & Android)
+          tag_name: v1.2.1
+          name: PTW System Release v1.2.1 (Windows & Android)
           body: |
-            ## 🚀 انتشار نسخه v1.2.0 سامانه مدیریت مجوز کار PTW و LOTO
-            - 📱 افزودن پشتیبانی کامل و کامپایل نسخه اندروید (.apk) در گیتهاب اکشنز
+            ## 🚀 انتشار نسخه v1.2.1 سامانه مدیریت مجوز کار PTW و LOTO
+            - 🐛 حل مشکل صفحه سفید (White Screen) نسخه ویندوز با تنظیم base نسبی و مسیریابی hash در الکترون
+            - 📱 پشتیبانی و کامپایل نسخه اندروید (.apk)
             - 💻 بسته نصبی دسکتاپ Windows (.exe و Portable)
             - 🔐 احراز هویت با رمز اختصاصی PIN برای مسئولین و مدیران مجاز
             - 🛡️ هش رمزی یکتا SHA-256 و پلمپ دیجیتال امضاها
