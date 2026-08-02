@@ -149,7 +149,7 @@ function Dashboard() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
             <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary border border-primary/20">
-              نسخه v1.2.1
+              نسخه v1.2.2
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ function Dashboard() {
               rel="noreferrer"
             >
               <Download className="size-4 text-primary" />
-              دانلود جدیدترین نسخه v1.2.1 (اندروید و ویندوز)
+              دانلود جدیدترین نسخه v1.2.2 (اندروید و ویندوز)
             </a>
           </Button>
           <Button asChild size="lg">

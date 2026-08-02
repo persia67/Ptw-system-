@@ -79,6 +79,13 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
+      - name: Ensure Dist Directory for Capacitor
+        run: |
+          mkdir -p dist
+          if [ -d ".output/public" ]; then
+            cp -r .output/public/* dist/
+          fi
+
       - name: Add and Sync Capacitor Android
         run: |
           npx cap add android || true
@@ -93,7 +100,7 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p dist-android
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.1-Android.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.2-Android.apk
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
@@ -125,13 +132,14 @@ jobs:
       - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.1
-          name: PTW System Release v1.2.1 (Windows & Android)
+          tag_name: v1.2.2
+          name: PTW System Release v1.2.2 (Windows & Android)
           body: |
-            ## 🚀 انتشار نسخه v1.2.1 سامانه مدیریت مجوز کار PTW و LOTO
-            
+            ## 🚀 انتشار نسخه v1.2.2 سامانه مدیریت مجوز کار PTW و LOTO
+
             ### 📱 نسخه اندروید (Android APK)
-            - **PTW-System-v1.2.1-Android.apk**: برنامه نصبی قابل اجرا روی گوشی‌ها و تبلت‌های اندروید.
+            - **PTW-System-v1.2.2-Android.apk**: برنامه نصبی قابل اجرا روی گوشی‌ها و تبلت‌های اندروید.
+            - 🛠️ **حل مشکل بیلد گیتهاب**: ایجاد خودکار وب دیرکتوری برای Capacitor و کامپایل موفق گرادل.
 
             ### 💻 نسخه دسکتاپ ویندوز (Windows Desktop)
             - **فایل نصبی (.exe)**: نصب سریع و کامل رو ویندوز با میانبر دسکتاپ.
