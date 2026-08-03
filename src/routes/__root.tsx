@@ -15,10 +15,8 @@ import {
   Archive,
   Lock,
   Settings2,
-  Download,
-  ShieldCheck,
+  Info,
   UserCheck,
-  LogIn,
 } from "lucide-react";
 
 import appCss from "../styles.css?url";
@@ -26,6 +24,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { PtwProvider, usePtwDb } from "@/lib/ptw/use-ptw";
 import { LoginModal } from "@/components/ptw/login-modal";
+import { AboutModal } from "@/components/ptw/about-modal";
 
 function NotFoundComponent() {
   return (
@@ -142,6 +141,7 @@ const NAV = [
 function AppContent() {
   const { db } = usePtwDb();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const currentUser = db.settings.currentUser;
 
   return (
@@ -157,7 +157,7 @@ function AppContent() {
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold leading-tight">سامانه مجوز کار — PTW</span>
                   <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
-                    v1.2.5
+                    v1.2.6
                   </span>
                 </div>
                 <span className="block text-xs text-sidebar-foreground/70">
@@ -166,7 +166,7 @@ function AppContent() {
               </div>
             </Link>
 
-            {/* نشان کاربر جاری و دکمه ورود/تغییر نقش */}
+            {/* نشان کاربر جاری، تغییر نقش و درباره نرم‌افزار */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -190,16 +190,15 @@ function AppContent() {
                 </span>
               </button>
 
-              <a
-                href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
-                target="_blank"
-                rel="noreferrer"
-                className="hidden xl:inline-flex items-center gap-1.5 rounded-full bg-accent/20 border border-accent/40 px-2.5 py-1 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-accent/30"
-                title="دانلود نسخه‌های ویندوز (.exe) و اندروید (.apk) از گیتهاب"
+              <button
+                type="button"
+                onClick={() => setAboutOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent/20 border border-accent/40 px-2.5 py-1.5 text-xs font-semibold text-sidebar-foreground transition-all hover:bg-accent/30"
+                title="مشاهده اطلاعات نرم‌افزار، به روزرسانی و لینک‌های دانلود"
               >
-                <Download className="size-3.5 text-accent" />
-                <span>v1.2.5</span>
-              </a>
+                <Info className="size-3.5 text-accent" />
+                <span>درباره و به‌روزرسانی</span>
+              </button>
             </div>
           </div>
 
@@ -229,6 +228,7 @@ function AppContent() {
       </main>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }

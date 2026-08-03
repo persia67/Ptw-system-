@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   FilePlus2,
   ShieldAlert,
@@ -9,14 +9,13 @@ import {
   PauseCircle,
   XCircle,
   Archive,
-  Download,
-  ShieldCheck,
-  Sparkles,
+  Info,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/ptw/status-badge";
+import { AboutModal } from "@/components/ptw/about-modal";
 import { usePtwDb } from "@/lib/ptw/use-ptw";
 import { permitTypeShort } from "@/lib/ptw/defaults";
 import { toJalaliDateTime, expiresSoon, isExpired, fa } from "@/lib/ptw/date";
@@ -124,6 +123,7 @@ function PermitRow({ permit }: { permit: Permit }) {
 
 function Dashboard() {
   const { db, ready } = usePtwDb();
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const stats = useMemo(() => {
     const ps = db.permits;
@@ -149,7 +149,7 @@ function Dashboard() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
             <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary border border-primary/20">
-              نسخه v1.2.5
+              v1.2.6
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -157,15 +157,14 @@ function Dashboard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="gap-2 border-primary/30">
-            <a
-              href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Download className="size-4 text-primary" />
-              دانلود جدیدترین نسخه v1.2.5 (اندروید و ویندوز)
-            </a>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAboutOpen(true)}
+            className="gap-1.5 border-primary/30"
+          >
+            <Info className="size-4 text-primary" />
+            درباره و به‌روزرسانی‌ها
           </Button>
           <Button asChild size="lg">
             <Link to="/permits/new">
@@ -173,35 +172,6 @@ function Dashboard() {
               صدور مجوز جدید
             </Link>
           </Button>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Sparkles className="size-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <ShieldCheck className="size-4 text-primary" />
-                انتشار نسخه جدید v1.2.1 — حل مشکل صفحه سفید (White Screen) نسخه ویندوز
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                به‌روزرسانی: رفع خطای بارگذاری اسکریپت‌های محلی در دسکتاپ ویندوز، تنظیم مسیردهی نسبی
-                و مسیربندی Hash Router جهت بارگذاری فوق‌السرعت.
-              </p>
-            </div>
-          </div>
-          <a
-            href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            <Download className="size-3.5" />
-            دانلود فایل نصبی (APK و EXE)
-          </a>
         </div>
       </div>
 
@@ -309,6 +279,8 @@ function Dashboard() {
           آخرین مجوز ثبت‌شده.
         </p>
       )}
+
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }

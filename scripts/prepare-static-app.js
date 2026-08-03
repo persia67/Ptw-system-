@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import "./prepare-tauri-icons.js";
 
 function prepareStaticApp() {
   console.log("🛠️ Preparing static index.html and dist bundle for Electron & Android...");

@@ -1,10 +1,12 @@
-name: Build & Package PTW System (Windows & Android)
+name: Build & Package PTW System (Tauri v2, Windows & Android)
 
 on:
   push:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -15,8 +17,62 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    name: 💻 Build Windows Installer (.exe & Portable)
+  build-tauri-windows:
+    name: 🦀 Build Tauri v2 Windows Installer (.msi & .exe)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (22.x LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Install Rust Stable Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Node Dependencies
+        run: npm install
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Build Tauri v2 Application
+        uses: tauri-apps/tauri-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'PTW System v__VERSION__'
+          releaseBody: 'Automated Tauri v2 Windows Release'
+          releaseDraft: false
+          prerelease: false
+
+      - name: Prepare Tauri Artifacts
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-tauri
+          Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe", "src-tauri/target/release/bundle/msi/*.msi" -ErrorAction SilentlyContinue | Copy-Item -Destination dist-tauri/ -Force
+
+      - name: Upload Tauri Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-windows-installer
+          path: |
+            dist-tauri/*
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          retention-days: 30
+
+  build-electron-windows:
+    name: 💻 Build Electron Windows Installer (.exe & Portable)
     runs-on: windows-latest
 
     steps:
@@ -34,24 +90,18 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
-      - name: Build Windows Installer (.exe) & Portable Executable
+      - name: Build Electron Windows Installer (.exe) & Portable Executable
         run: npx electron-builder --win nsis portable --config.directories.output=dist-win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Web Bundle Zip (Fallback Artifact)
-        if: always()
-        run: |
-          powershell -Command "New-Item -ItemType Directory -Force -Path dist-win; if (Test-Path .output/public) { Compress-Archive -Path .output/public/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force } else { if (Test-Path dist) { Compress-Archive -Path dist/* -DestinationPath dist-win/PTW-System-WebBundle.zip -Force } }"
-
-      - name: Upload Windows Artifacts
+      - name: Upload Electron Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
+          name: electron-windows-installer
           path: |
             dist-win/*.exe
             dist-win/*.msi
-            dist-win/*.zip
           retention-days: 30
 
   build-android:
@@ -73,6 +123,12 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
+      - name: Get Version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Install Dependencies
         run: npm install
 
@@ -82,7 +138,7 @@ jobs:
       - name: Add and Sync Capacitor Android
         run: |
           rm -rf android
-          npx cap add android
+          npx cap add android || true
           npx cap sync android
 
       - name: Build Android APK with Gradle
@@ -94,7 +150,8 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p dist-android
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.5-Android.apk
+          VERSION="${{ steps.package-version.outputs.version }}"
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v${VERSION}-Android.apk
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
@@ -105,17 +162,34 @@ jobs:
           retention-days: 30
 
   publish-release:
-    name: 🚀 Publish GitHub Release (Windows & Android)
-    needs: [build-windows, build-android]
+    name: 🚀 Publish GitHub Release (Tauri v2, Windows & Android)
+    needs: [build-tauri-windows, build-electron-windows, build-android]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - name: Download Windows Artifacts
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Get Version from package.json
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download Tauri Windows Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: windows-installer
+          name: tauri-windows-installer
           path: release-assets
+        continue-on-error: true
+
+      - name: Download Electron Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-windows-installer
+          path: release-assets
+        continue-on-error: true
 
       - name: Download Android Artifacts
         uses: actions/download-artifact@v4
@@ -126,22 +200,22 @@ jobs:
       - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.5
-          name: PTW System Release v1.2.5 (Windows & Android)
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: PTW System Release v${{ steps.get_version.outputs.version }} (Tauri v2, Windows & Android)
           body: |
-            ## 🚀 انتشار نسخه v1.2.5 سامانه مدیریت مجوز کار PTW و LOTO
+            ## 🚀 انتشار نسخه v${{ steps.get_version.outputs.version }} سامانه مدیریت مجوز کار PTW و LOTO
 
             ### 📱 نسخه اندروید (Android APK)
-            - **PTW-System-v1.2.5-Android.apk**: برنامه نصبی قابل اجرا روی گوشی‌ها و تبلت‌های اندروید.
+            - **PTW-System-v${{ steps.get_version.outputs.version }}-Android.apk**: برنامه نصبی قابل اجرا روی کلیه گوشی‌ها و تبلت‌های اندروید.
 
-            ### 💻 نسخه دسکتاپ ویندوز (Windows Desktop)
-            - **فایل نصبی (.exe)**: نصب سریع و کامل روی ویندوز با میانبر دسکتاپ.
-            - **نسخه بدون نیاز به نصب (Portable)**: اجرای مستقیم بدون نیاز به دسترسی ادمین.
-            - 🐛 **رفع کامل مشکل صفحه سفید (White Screen)**: ایجاد خودکار index.html با لینک‌های کامل اسکریپت و استایل به همراه سرور داخلی استاتیک دسکتاپ.
+            ### 💻 نسخه دسکتاپ ویندوز (Tauri v2 & Electron)
+            - **نسخه خ Were / Tauri v2 (.exe / .msi)**: برنامه نصبی فوق‌العاده سبک، پرسرعت و بهینه‌شده با فریم‌ورک قدرتمند Tauri v2.
+            - **نسخه Electron (.exe)**: نسخه نصبی و پرتابل متداول دسکتاپ.
 
-            ### 🛡️ ویژگی‌های امنیتی
-            - 🔐 احراز هویت با رمز اختصاصی PIN برای مسئولین و مدیران مجاز.
-            - 🛡️ پلمپ دیجیتال امضاها با هش یکتای cryptographic SHA-256.
+            ### 🛠️ بهبودها و ویژگی‌های کلی
+            - ⚡ اجرا کاملاً خودکار، آفلاین و بدون نیاز به اینترنت.
+            - 🐛 رفع کامل مشکلات رندر و صفحه سفید در تمام نسخه‌ها.
+            - 🔐 احراز هویت با کد PIN، امضای دیجیتال و پلمپ امنیتی SHA-256.
           files: |
             release-assets/*
         env:

@@ -1,0 +1,15 @@
+[package]
+name = "ptw-system"
+version = "1.2.6"
+description = "سامانه مدیریت مجوز کار PTW و LOTO واحد ایمنی و بهداشت حرفه‌ای"
+authors = ["HSE Department"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+tauri-plugin-shell = "2.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

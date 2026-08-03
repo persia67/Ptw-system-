@@ -12,7 +12,9 @@ import {
   Unlink,
   FolderOpen,
   ShieldCheck,
+  Info,
 } from "lucide-react";
+import { AboutModal } from "@/components/ptw/about-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +60,7 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [prefs, setPrefs] = useState<SyncPrefs>(DEFAULT_SYNC_PREFS);
   const [supported, setSupported] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     if (ready) setS(db.settings);
@@ -785,6 +788,30 @@ function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Info className="size-4 text-primary" />
+              درباره نرم‌افزار و به‌روزرسانی‌ها
+            </span>
+            <span className="text-xs font-mono font-semibold text-primary">v1.2.6</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            جهت مشاهده گزارش تغییرات آخرین نسخه‌ها، اطلاعات سیستم و لینک‌های مستقیم دانلود فایل نصبی
+            اندروید (APK) و ویندوز (EXE/MSI)، روی دکمه زیر کلیک نمایید.
+          </p>
+          <Button onClick={() => setAboutOpen(true)} className="gap-2">
+            <Info className="size-4" />
+            مشاهده اطلاعات و به‌روزرسانی‌ها
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }
