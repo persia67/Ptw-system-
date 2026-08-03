@@ -94,7 +94,7 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p dist-android
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.4-Android.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-android/PTW-System-v1.2.5-Android.apk
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
@@ -126,13 +126,13 @@ jobs:
       - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.4
-          name: PTW System Release v1.2.4 (Windows & Android)
+          tag_name: v1.2.5
+          name: PTW System Release v1.2.5 (Windows & Android)
           body: |
-            ## 🚀 انتشار نسخه v1.2.4 سامانه مدیریت مجوز کار PTW و LOTO
+            ## 🚀 انتشار نسخه v1.2.5 سامانه مدیریت مجوز کار PTW و LOTO
 
             ### 📱 نسخه اندروید (Android APK)
-            - **PTW-System-v1.2.4-Android.apk**: برنامه نصبی قابل اجرا روی گوشی‌ها و تبلت‌های اندروید.
+            - **PTW-System-v1.2.5-Android.apk**: برنامه نصبی قابل اجرا روی گوشی‌ها و تبلت‌های اندروید.
 
             ### 💻 نسخه دسکتاپ ویندوز (Windows Desktop)
             - **فایل نصبی (.exe)**: نصب سریع و کامل روی ویندوز با میانبر دسکتاپ.

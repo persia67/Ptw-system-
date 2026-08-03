@@ -156,7 +156,7 @@ function RootComponent() {
                         سامانه مجوز کار — PTW
                       </span>
                       <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
-                        v1.2.4
+                        v1.2.5
                       </span>
                     </div>
                     <span className="block text-xs text-sidebar-foreground/70">
@@ -173,7 +173,7 @@ function RootComponent() {
                   title="دانلود نسخه‌های ویندوز (.exe) و اندروید (.apk) از گیتهاب"
                 >
                   <Download className="size-3.5 text-accent" />
-                  <span>دانلود نسخه v1.2.4 (ویندوز و اندروید)</span>
+                  <span>دانلود نسخه v1.2.5 (ویندوز و اندروید)</span>
                 </a>
               </div>
               <nav className="flex flex-wrap items-center gap-1">
