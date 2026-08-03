@@ -34,7 +34,7 @@ import {
 } from "@/lib/ptw/sync";
 import { toJalaliDateTime } from "@/lib/ptw/date";
 import { uid } from "@/lib/ptw/workflow";
-import type { Settings, WorkflowStep, PermitTypeId } from "@/lib/ptw/types";
+import type { Settings, WorkflowStep, PermitTypeId, MessengerChannel } from "@/lib/ptw/types";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -209,46 +209,93 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ShieldCheck className="size-5 text-primary" />
-            فهرست مسئولین و مدیران دارای حق امضا (همراه با رمز امنیتی PIN ضدجعل)
+            فهرست مسئولین و مدیران دارای حق امضا (اطلاعات ورود، PIN و پیام‌رسان OTP)
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            برای جلوگیری از سوءاستفاده یا امضای غیرمجاز، می‌توانید برای هر مدیر یک PIN کد ۴ رقمی
-            اختصاص دهید تا هنگام امضای مجوز استعلام هویت انجام گیرد.
+            برای هر یک از اعضای مجاز، نام کاربری، کلمه عبور، PIN اختصاصی و شماره تماس/آیدی پیام‌رسان
+            (جهت ارسال کد یکبار مصرف OTP به ایتا، بله، واتساپ، تلگرام یا پیامک) را تنظیم فرمایید.
           </p>
           {(s.people || []).map((p, i) => (
             <div
               key={i}
-              className="grid gap-2 rounded-md border border-border p-3 text-sm sm:grid-cols-3 sm:items-end"
+              className="space-y-3 rounded-md border border-border bg-card p-3 text-sm shadow-sm"
             >
-              <div>
-                <Label className="text-xs">نام و نام خانوادگی</Label>
-                <Input
-                  value={p.name}
-                  onChange={(e) => {
-                    const next = [...(s.people || [])];
-                    next[i].name = e.target.value;
-                    setS({ ...s, people: next });
-                  }}
-                  maxLength={60}
-                />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <Label className="text-xs font-semibold">نام و نام خانوادگی *</Label>
+                  <Input
+                    value={p.name}
+                    onChange={(e) => {
+                      const next = [...(s.people || [])];
+                      next[i].name = e.target.value;
+                      setS({ ...s, people: next });
+                    }}
+                    maxLength={60}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold">سمت سازمانی / مسئولیت *</Label>
+                  <Input
+                    value={p.position}
+                    onChange={(e) => {
+                      const next = [...(s.people || [])];
+                      next[i].position = e.target.value;
+                      setS({ ...s, people: next });
+                    }}
+                    maxLength={60}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold">شماره همراه / آیدی جهت دریافت OTP</Label>
+                  <Input
+                    value={p.phone || p.messengerTarget || ""}
+                    placeholder="09123456789"
+                    onChange={(e) => {
+                      const next = [...(s.people || [])];
+                      next[i].phone = e.target.value;
+                      next[i].messengerTarget = e.target.value;
+                      setS({ ...s, people: next });
+                    }}
+                    maxLength={30}
+                    className="font-mono dir-ltr text-right"
+                  />
+                </div>
               </div>
-              <div>
-                <Label className="text-xs">سمت سازمانی / مسئولیت</Label>
-                <Input
-                  value={p.position}
-                  onChange={(e) => {
-                    const next = [...(s.people || [])];
-                    next[i].position = e.target.value;
-                    setS({ ...s, people: next });
-                  }}
-                  maxLength={60}
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <Label className="text-xs">رمز امنیتی PIN (اختیاری)</Label>
+
+              <div className="grid gap-3 sm:grid-cols-4 items-end">
+                <div>
+                  <Label className="text-xs font-semibold">نام کاربری ورود</Label>
+                  <Input
+                    value={p.username || ""}
+                    placeholder="مثلا: hse_mgr"
+                    onChange={(e) => {
+                      const next = [...(s.people || [])];
+                      next[i].username = e.target.value;
+                      setS({ ...s, people: next });
+                    }}
+                    maxLength={40}
+                    className="font-mono dir-ltr text-right"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold">کلمه عبور ورود</Label>
+                  <Input
+                    type="password"
+                    value={p.password || ""}
+                    placeholder="پیش‌فرض: 123"
+                    onChange={(e) => {
+                      const next = [...(s.people || [])];
+                      next[i].password = e.target.value;
+                      setS({ ...s, people: next });
+                    }}
+                    maxLength={40}
+                    className="font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold">رمز امنیتی PIN (اختیاری)</Label>
                   <Input
                     type="password"
                     value={p.pin || ""}
@@ -259,16 +306,38 @@ function SettingsPage() {
                       setS({ ...s, people: next });
                     }}
                     maxLength={10}
+                    className="font-mono text-center tracking-widest"
                   />
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  type="button"
-                  onClick={() => setS({ ...s, people: s.people.filter((_, idx) => idx !== i) })}
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex-1">
+                    <Label className="text-xs font-semibold">پیام‌رسان ترجیحی</Label>
+                    <select
+                      value={p.preferredMessenger || "eitaa"}
+                      onChange={(e) => {
+                        const next = [...(s.people || [])];
+                        next[i].preferredMessenger = e.target.value as MessengerChannel;
+                        setS({ ...s, people: next });
+                      }}
+                      className="w-full h-9 rounded-md border border-input bg-background px-2 py-1 text-xs"
+                    >
+                      <option value="eitaa">ایتا (Eitaa)</option>
+                      <option value="bale">بله (Bale)</option>
+                      <option value="whatsapp">واتساپ (WhatsApp)</option>
+                      <option value="telegram">تلگرام (Telegram)</option>
+                      <option value="sms">پیامک (SMS)</option>
+                    </select>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => setS({ ...s, people: s.people.filter((_, idx) => idx !== i) })}
+                    title="حذف مسئول"
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
@@ -280,7 +349,15 @@ function SettingsPage() {
                 ...s,
                 people: [
                   ...(s.people || []),
-                  { name: "مدیر جدید", position: "مسئول ایمنی", pin: "" },
+                  {
+                    name: "مسئول جدید",
+                    position: "کارشناس ایمنی",
+                    phone: "09123456789",
+                    username: "",
+                    password: "123",
+                    pin: "",
+                    preferredMessenger: "eitaa",
+                  },
                 ],
               })
             }
@@ -288,6 +365,150 @@ function SettingsPage() {
             <Plus className="size-4" />
             افزودن مدیر / مسئول مجاز
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* تنظیمات احراز هویت دو مرحله‌ای OTP */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldCheck className="size-5 text-emerald-600" />
+            تنظیمات سامانه احراز هویت پیام‌رسانی (OTP)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/20">
+            <div>
+              <div className="text-sm font-bold">الزام ارسال کد تایید OTP هنگام ثبت امضا</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                در صورت فعال‌سازی، امضاکننده برای نهایی‌سازی امضای مجوز کار باید کد چندرقمی
+                ارسال‌شده به پیام‌رسان (ایتا، بله، واتساپ، تلگرام) را وارد نماید.
+              </div>
+            </div>
+            <Switch
+              checked={s.otpConfig?.enabled ?? false}
+              onCheckedChange={(checked) =>
+                setS({
+                  ...s,
+                  otpConfig: {
+                    ...(s.otpConfig || {
+                      enabled: false,
+                      defaultMessenger: "eitaa",
+                      codeLength: 5,
+                      expireSeconds: 120,
+                    }),
+                    enabled: checked,
+                  },
+                })
+              }
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <Label className="text-xs font-semibold">پیام‌رسان پیش‌فرض ارسال کد</Label>
+              <select
+                value={s.otpConfig?.defaultMessenger || "eitaa"}
+                onChange={(e) =>
+                  setS({
+                    ...s,
+                    otpConfig: {
+                      ...(s.otpConfig || {
+                        enabled: false,
+                        defaultMessenger: "eitaa",
+                        codeLength: 5,
+                        expireSeconds: 120,
+                      }),
+                      defaultMessenger: e.target.value as MessengerChannel,
+                    },
+                  })
+                }
+                className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+              >
+                <option value="eitaa">پیام‌رسان ایتا (Eitaa)</option>
+                <option value="bale">پیام‌رسان بله (Bale)</option>
+                <option value="whatsapp">واتساپ (WhatsApp)</option>
+                <option value="telegram">تلگرام (Telegram)</option>
+                <option value="sms">سامانه پیامکی SMS</option>
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold">تعداد ارقام کد OTP</Label>
+              <select
+                value={s.otpConfig?.codeLength || 5}
+                onChange={(e) =>
+                  setS({
+                    ...s,
+                    otpConfig: {
+                      ...(s.otpConfig || {
+                        enabled: false,
+                        defaultMessenger: "eitaa",
+                        codeLength: 5,
+                        expireSeconds: 120,
+                      }),
+                      codeLength: Number(e.target.value),
+                    },
+                  })
+                }
+                className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-xs font-mono"
+              >
+                <option value={4}>۴ رقمی</option>
+                <option value={5}>۵ رقمی (استاندارد)</option>
+                <option value={6}>۶ رقمی (حداکثر امنیت)</option>
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold">مدت زمان اعتبار کد (ثانیه)</Label>
+              <Input
+                type="number"
+                value={s.otpConfig?.expireSeconds || 120}
+                onChange={(e) =>
+                  setS({
+                    ...s,
+                    otpConfig: {
+                      ...(s.otpConfig || {
+                        enabled: false,
+                        defaultMessenger: "eitaa",
+                        codeLength: 5,
+                        expireSeconds: 120,
+                      }),
+                      expireSeconds: Number(e.target.value) || 120,
+                    },
+                  })
+                }
+                className="mt-1 font-mono"
+                min={30}
+                max={600}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold">
+              آدرس وب‌هوک ارسال خودکار (Webhook URL اختیاری)
+            </Label>
+            <Input
+              value={s.otpConfig?.webhookUrl || ""}
+              onChange={(e) =>
+                setS({
+                  ...s,
+                  otpConfig: {
+                    ...(s.otpConfig || {
+                      enabled: false,
+                      defaultMessenger: "eitaa",
+                      codeLength: 5,
+                      expireSeconds: 120,
+                    }),
+                    webhookUrl: e.target.value,
+                  },
+                })
+              }
+              placeholder="https://api.example.com/send-otp (جهت اتصال مستقیم به ربات ایتا/بله یا پنل SMS)"
+              className="mt-1 font-mono text-xs dir-ltr text-right"
+            />
+          </div>
         </CardContent>
       </Card>
 

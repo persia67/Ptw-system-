@@ -8,9 +8,8 @@ export const getRouter = () => {
   const isStaticOrAppEnv = (() => {
     if (typeof window === "undefined") return false;
 
-    const protocol = window.location.protocol;
-    const pathname = window.location.pathname;
-    const hash = window.location.hash;
+    const protocol = window.location.protocol || "";
+    const pathname = window.location.pathname || "";
     const ua = window.navigator?.userAgent?.toLowerCase() || "";
     const win = window as unknown as {
       Capacitor?: unknown;
@@ -22,11 +21,17 @@ export const getRouter = () => {
       protocol === "capacitor:" ||
       ua.includes("electron") ||
       pathname.includes("android_asset") ||
-      hash.startsWith("#/") ||
+      (pathname.endsWith(".html") && pathname !== "/") ||
       Boolean(win.Capacitor) ||
       Boolean(win.capacitor)
     );
   })();
+
+  if (isStaticOrAppEnv && typeof window !== "undefined") {
+    if (!window.location.hash || window.location.hash === "#" || window.location.hash === "") {
+      window.location.hash = "#/";
+    }
+  }
 
   const router = createRouter({
     routeTree,

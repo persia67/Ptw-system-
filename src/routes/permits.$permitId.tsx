@@ -39,6 +39,7 @@ import { StatusBadge } from "@/components/ptw/status-badge";
 import { SignaturePad } from "@/components/ptw/signature-pad";
 import { SignaturePreview } from "@/components/ptw/signature-preview";
 import { PermitPrintSheet } from "@/components/ptw/permit-print";
+import { OtpVerificationModal } from "@/components/ptw/otp-verification-modal";
 import { usePtwDb } from "@/lib/ptw/use-ptw";
 import { permitTypeTitle } from "@/lib/ptw/defaults";
 import { JalaliDateTimeInput } from "@/components/ptw/jalali-datetime-input";
@@ -52,7 +53,7 @@ import {
   evt,
 } from "@/lib/ptw/workflow";
 import { generateSignatureHash, generateDeviceToken } from "@/lib/ptw/security";
-import type { Permit, StepSignature } from "@/lib/ptw/types";
+import type { Permit, StepSignature, MessengerChannel, Person } from "@/lib/ptw/types";
 
 export const Route = createFileRoute("/permits/$permitId")({
   head: () => ({
@@ -87,6 +88,11 @@ function PermitDetail() {
     sig: StepSignature;
     stepTitle: string;
   } | null>(null);
+
+  // OTP Verification state
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpTargetPerson, setOtpTargetPerson] = useState<Person | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<"approved" | "rejected" | null>(null);
 
   const [extendTo, setExtendTo] = useState("");
   const [extendReason, setExtendReason] = useState("");
@@ -127,28 +133,57 @@ function PermitDetail() {
       updatedAt: new Date().toISOString(),
     });
 
-  const decide = async (decision: "approved" | "rejected") => {
+  const decide = async (decision: "approved" | "rejected", forceOtp = false) => {
     if (!step) return;
-    if (!signName.trim()) return toast.error("نام امضاکننده را وارد کنید");
+    const nameToUse = signName.trim() || db.settings.currentUser.name;
+    if (!nameToUse) return toast.error("نام امضاکننده را وارد کنید");
     if (decision === "rejected" && !signComment.trim()) return toast.error("دلیل رد را بنویسید");
 
     // Check optional manager security PIN
     const matchedPerson = (db.settings.people || []).find(
-      (p) => p.name.trim().toLowerCase() === signName.trim().toLowerCase(),
+      (p) => p.name.trim().toLowerCase() === nameToUse.toLowerCase(),
     );
-    let verifiedPin = false;
     if (matchedPerson?.pin && matchedPerson.pin.trim()) {
       if (!signPin || signPin.trim() !== matchedPerson.pin.trim()) {
         return toast.error("رمز امنیتی PIN واردشده برای این مدیر/مسئول صحیح نیست!");
       }
-      verifiedPin = true;
     }
+
+    const isOtpRequired = forceOtp || (db.settings.otpConfig?.enabled && decision === "approved");
+
+    if (isOtpRequired) {
+      const personForOtp: Person = matchedPerson || {
+        name: nameToUse,
+        position: step.roleTitle,
+        phone: db.settings.currentUser.phone || "09123456789",
+        messengerTarget: db.settings.currentUser.phone || "09123456789",
+        preferredMessenger: db.settings.otpConfig?.defaultMessenger || "eitaa",
+      };
+      setOtpTargetPerson(personForOtp);
+      setPendingDecision(decision);
+      setOtpModalOpen(true);
+    } else {
+      await executeDecide(decision, nameToUse);
+    }
+  };
+
+  const executeDecide = async (
+    decision: "approved" | "rejected",
+    signerName: string,
+    otpChannel?: MessengerChannel,
+  ) => {
+    if (!step) return;
+
+    const matchedPerson = (db.settings.people || []).find(
+      (p) => p.name.trim().toLowerCase() === signerName.toLowerCase(),
+    );
+    const verifiedPin = Boolean(matchedPerson?.pin && signPin.trim() === matchedPerson.pin.trim());
 
     const timestamp = new Date().toISOString();
     const verificationHash = await generateSignatureHash(
       permit.id,
       step.id,
-      signName.trim(),
+      signerName,
       step.roleTitle,
       decision,
       timestamp,
@@ -159,13 +194,15 @@ function PermitDetail() {
     const signature: StepSignature = {
       stepId: step.id,
       decision,
-      name: signName.trim(),
+      name: signerName,
       position: step.roleTitle,
       comment: signComment.trim() || undefined,
       signatureDataUrl: signData,
       at: timestamp,
       verificationHash,
       verifiedPin,
+      verifiedOtp: Boolean(otpChannel),
+      otpChannel,
       deviceSignatureToken: deviceToken,
     };
 
@@ -190,15 +227,25 @@ function PermitDetail() {
         evt(
           finished ? "issued" : "approved",
           signature.name,
-          finished ? "تمام تاییدها انجام شد و مجوز صادر گردید" : `مرحله «${step.title}» تایید شد`,
+          finished
+            ? "تمام تاییدها انجام شد و مجوز صادر گردید"
+            : `مرحله «${step.title}» ${otpChannel ? "با احراز هویت پیام‌رسان" : ""} تایید شد`,
         ),
       );
-      toast.success(finished ? "امضا با رمزنگاری امنیتی SHA-256 ثبت گردید" : "امضا ثبت شد");
+      toast.success(
+        finished
+          ? "امضا با احراز هویت و رمزنگاری SHA-256 ثبت گردید"
+          : `امضا ثبت شد ${otpChannel ? "(احراز هویت شده توسط پیام‌رسان)" : ""}`,
+      );
     }
+
     setSignName("");
     setSignComment("");
     setSignPin("");
     setSignData(undefined);
+    setOtpModalOpen(false);
+    setPendingDecision(null);
+    setOtpTargetPerson(null);
   };
 
   return (
@@ -426,10 +473,27 @@ function PermitDetail() {
 
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                     <div className="flex flex-wrap gap-2">
-                      <Button onClick={() => decide("approved")} className="gap-2">
+                      <Button onClick={() => decide("approved")} className="gap-2 bg-primary">
                         <CheckCircle2 className="size-4" />
                         تایید و امضای رسمی
+                        {db.settings.otpConfig?.enabled && (
+                          <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-mono">
+                            + OTP
+                          </span>
+                        )}
                       </Button>
+
+                      {/* دکمه اختصاصی امضا با ارسال OTP به پیام‌رسان‌ها */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => decide("approved", true)}
+                        className="gap-2 border-emerald-500/50 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                      >
+                        <ShieldCheck className="size-4 text-emerald-600" />
+                        احراز هویت با پیام‌رسان (ایتا/بله/واتساپ/تلگرام)
+                      </Button>
+
                       <Button
                         variant="destructive"
                         onClick={() => decide("rejected")}
@@ -921,10 +985,12 @@ function PermitDetail() {
                 </div>
                 <div className="flex justify-between border-b pb-1">
                   <span className="text-muted-foreground">وضعیت احراز هویت:</span>
-                  <span className="font-semibold">
-                    {auditSig.sig.verifiedPin
-                      ? "تایید هویت با رمز PIN اختصاصی"
-                      : "امضای مجاز استاندارد"}
+                  <span className="font-semibold text-emerald-600">
+                    {auditSig.sig.verifiedOtp
+                      ? `احراز هویت کامل با OTP (${auditSig.sig.otpChannel || "پیام‌رسان"})`
+                      : auditSig.sig.verifiedPin
+                        ? "تایید هویت با رمز PIN اختصاصی"
+                        : "امضای مجاز استاندارد"}
                   </span>
                 </div>
               </div>
@@ -970,6 +1036,21 @@ function PermitDetail() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* مدال احراز هویت پیام‌رسانی OTP */}
+      {otpTargetPerson && pendingDecision && (
+        <OtpVerificationModal
+          open={otpModalOpen}
+          person={otpTargetPerson}
+          onClose={() => {
+            setOtpModalOpen(false);
+            setPendingDecision(null);
+          }}
+          onVerified={(channel) => {
+            executeDecide(pendingDecision, otpTargetPerson.name, channel);
+          }}
+        />
+      )}
     </div>
   );
 }

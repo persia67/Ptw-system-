@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   HardHat,
   LayoutDashboard,
@@ -17,12 +17,15 @@ import {
   Settings2,
   Download,
   ShieldCheck,
+  UserCheck,
+  LogIn,
 } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import { PtwProvider } from "@/lib/ptw/use-ptw";
+import { PtwProvider, usePtwDb } from "@/lib/ptw/use-ptw";
+import { LoginModal } from "@/components/ptw/login-modal";
 
 function NotFoundComponent() {
   return (
@@ -116,11 +119,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <div id="root">{children}</div>
         <Scripts />
       </body>
@@ -136,71 +139,107 @@ const NAV = [
   { to: "/settings", label: "تنظیمات", icon: Settings2 },
 ] as const;
 
+function AppContent() {
+  const { db } = usePtwDb();
+  const [loginOpen, setLoginOpen] = useState(false);
+  const currentUser = db.settings.currentUser;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="no-print sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full lg:w-auto">
+            <Link to="/" className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
+                <HardHat className="size-5" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold leading-tight">سامانه مجوز کار — PTW</span>
+                  <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
+                    v1.2.5
+                  </span>
+                </div>
+                <span className="block text-xs text-sidebar-foreground/70">
+                  واحد ایمنی و بهداشت حرفه‌ای (ویندوز + اندروید)
+                </span>
+              </div>
+            </Link>
+
+            {/* نشان کاربر جاری و دکمه ورود/تغییر نقش */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLoginOpen(true)}
+                className="flex items-center gap-2 rounded-lg bg-sidebar-accent/60 hover:bg-sidebar-accent px-2.5 py-1.5 text-xs border border-sidebar-border transition-all text-right"
+                title="کلیک کنید تا نقش یا کاربر جاری را تغییر دهید"
+              >
+                <div className="flex size-7 items-center justify-center rounded-full bg-primary/20 text-primary-foreground font-bold">
+                  <UserCheck className="size-4" />
+                </div>
+                <div className="hidden sm:block">
+                  <div className="font-bold leading-none text-sidebar-foreground">
+                    {currentUser.name || "کاربر عمومی"}
+                  </div>
+                  <div className="text-[10px] text-sidebar-foreground/70 mt-0.5">
+                    {currentUser.position || "مسئول"}
+                  </div>
+                </div>
+                <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                  تغییر نقش
+                </span>
+              </button>
+
+              <a
+                href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
+                target="_blank"
+                rel="noreferrer"
+                className="hidden xl:inline-flex items-center gap-1.5 rounded-full bg-accent/20 border border-accent/40 px-2.5 py-1 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-accent/30"
+                title="دانلود نسخه‌های ویندوز (.exe) و اندروید (.apk) از گیتهاب"
+              >
+                <Download className="size-3.5 text-accent" />
+                <span>v1.2.5</span>
+              </a>
+            </div>
+          </div>
+
+          <nav className="flex flex-wrap items-center gap-1">
+            {NAV.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                preload="intent"
+                activeOptions={{ exact: item.to === "/" }}
+                className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                activeProps={{
+                  className:
+                    "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
+                }}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="h-1 ptw-hatch opacity-80" />
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-6">
+        <Outlet />
+      </main>
+
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <PtwProvider>
       <QueryClientProvider client={queryClient}>
-        <div className="min-h-screen bg-background">
-          <header className="no-print sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
-                <Link to="/" className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded bg-sidebar-primary text-sidebar-primary-foreground">
-                    <HardHat className="size-5" />
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold leading-tight">
-                        سامانه مجوز کار — PTW
-                      </span>
-                      <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
-                        v1.2.5
-                      </span>
-                    </div>
-                    <span className="block text-xs text-sidebar-foreground/70">
-                      واحد ایمنی و بهداشت حرفه‌ای (ویندوز + اندروید)
-                    </span>
-                  </div>
-                </Link>
-
-                <a
-                  href="https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-accent/20 border border-accent/40 px-2.5 py-1 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-accent/30"
-                  title="دانلود نسخه‌های ویندوز (.exe) و اندروید (.apk) از گیتهاب"
-                >
-                  <Download className="size-3.5 text-accent" />
-                  <span>دانلود نسخه v1.2.5 (ویندوز و اندروید)</span>
-                </a>
-              </div>
-              <nav className="flex flex-wrap items-center gap-1">
-                {NAV.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    preload="intent"
-                    activeOptions={{ exact: item.to === "/" }}
-                    className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    activeProps={{
-                      className:
-                        "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
-                    }}
-                  >
-                    <item.icon className="size-4" />
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-            <div className="h-1 ptw-hatch opacity-80" />
-          </header>
-          <main className="mx-auto max-w-7xl px-4 py-6">
-            <Outlet />
-          </main>
-        </div>
+        <AppContent />
         <Toaster position="top-center" dir="rtl" richColors />
       </QueryClientProvider>
     </PtwProvider>

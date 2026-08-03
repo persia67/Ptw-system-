@@ -5,6 +5,35 @@ export type PermitStatus = "draft" | "pending" | "active" | "suspended" | "cance
 
 export type SignatureDecision = "approved" | "rejected";
 
+export type MessengerChannel = "eitaa" | "bale" | "whatsapp" | "telegram" | "sms" | "simulator";
+
+export interface Person {
+  id?: string;
+  name: string;
+  position: string;
+  pin?: string;
+  username?: string;
+  password?: string;
+  phone?: string;
+  messengerType?: MessengerChannel;
+  messengerTarget?: string; // شناسه یا شماره در پیام‌رسان
+  savedSignatureUrl?: string; // امضای ذخیره‌شده دیجیتالی
+}
+
+export interface OtpConfig {
+  enabled: boolean;
+  digits: 4 | 6;
+  expirySeconds: number;
+  defaultChannel: MessengerChannel;
+  webhookUrl?: string;
+  customMessageTemplate?: string;
+}
+
+export interface AuthConfig {
+  requireLogin: boolean;
+  autoPrefillSignature: boolean;
+}
+
 export interface StepSignature {
   stepId: string;
   decision: SignatureDecision;
@@ -15,6 +44,8 @@ export interface StepSignature {
   at: string; // ISO
   verificationHash?: string; // SHA-256 cryptographic digest
   verifiedPin?: boolean; // آیا PIN تایید شده است؟
+  verifiedOtp?: boolean; // آیا کد احراز هویت OTP پیام‌رسان تایید شده است؟
+  otpChannel?: MessengerChannel; // پیام‌رسانی که کد به آن ارسال شد
   deviceSignatureToken?: string; // کد امنیتی دستگاه/مرورگر
 }
 
@@ -146,10 +177,12 @@ export interface Settings {
   companyName: string;
   plantName: string;
   units: string[];
-  people: { name: string; position: string; pin?: string }[];
+  people: Person[];
   workflow: WorkflowStep[];
   defaultDurationHours: Record<PermitTypeId, number>;
-  currentUser: { name: string; position: string };
+  currentUser: { name: string; position: string; username?: string; phone?: string };
+  otpConfig?: OtpConfig;
+  authConfig?: AuthConfig;
 }
 
 export interface PtwDatabase {

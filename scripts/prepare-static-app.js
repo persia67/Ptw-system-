@@ -40,29 +40,49 @@ function prepareStaticApp() {
     <link rel="icon" href="./favicon.ico" />
     ${stylesCssFile ? `<link rel="stylesheet" href="./assets/${stylesCssFile}" />` : ""}
     <script>
-      // Initialize hydration data for TanStack Start in static client app mode
-      window.__TSTR_DATA__ = window.__TSTR_DATA__ || {
-        manifest: { routes: {} },
-        state: { dehydrated: { mutations: [], queries: [] } }
-      };
+      (function() {
+        try {
+          // Initialize hydration data for TanStack Start in static client app mode
+          window.__TSTR_DATA__ = window.__TSTR_DATA__ || {
+            manifest: { routes: {} },
+            state: { dehydrated: { mutations: [], queries: [] } }
+          };
 
-      // Redirect root static path to hash route if hash is empty in file/app environments
-      if (!window.location.hash && (window.location.protocol === 'file:' || window.location.protocol === 'capacitor:' || (window.navigator?.userAgent || '').toLowerCase().includes('electron') || window.location.pathname.endsWith('.html') || window.location.pathname.includes('android_asset'))) {
-        window.location.hash = '#/';
-      }
+          var ua = (window.navigator && window.navigator.userAgent) ? window.navigator.userAgent.toLowerCase() : '';
+          var proto = window.location.protocol || '';
+          var path = window.location.pathname || '';
+          var host = window.location.hostname || '';
+          var port = window.location.port || '';
 
-      // Fallback global error boundary for webview / electron debugging
-      window.addEventListener('error', function(e) {
-        console.error('PTW System Global Error:', e.error || e.message);
-        var root = document.getElementById('root');
-        if (root && (!root.children || root.children.length === 0)) {
-          root.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: sans-serif; dir: rtl;">' +
-            '<h2 style="color: #e11d48; margin-bottom: 1rem;">خطا در اجرای برنامه</h2>' +
-            '<p style="color: #475569; font-size: 0.9rem;">' + (e.message || 'مشکلی در بارگذاری رخ داده است.') + '</p>' +
-            '<button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 0.375rem; cursor: pointer;">تلاش دوباره</button>' +
-            '</div>';
+          // Detect if running inside Android APK, Capacitor, Electron, or static file/webview
+          var isApp = proto === 'file:' ||
+                      proto === 'capacitor:' ||
+                      ua.indexOf('electron') !== -1 ||
+                      path.indexOf('.html') !== -1 ||
+                      path.indexOf('android_asset') !== -1 ||
+                      Boolean(window.Capacitor) ||
+                      Boolean(window.capacitor);
+
+          if (isApp && (!window.location.hash || window.location.hash === '#' || window.location.hash === '')) {
+            window.location.hash = '#/';
+          }
+        } catch (e) {
+          console.error('PTW App Init Error:', e);
         }
-      });
+
+        // Fallback global error boundary for webview / electron debugging
+        window.addEventListener('error', function(e) {
+          console.error('PTW System Global Error:', e.error || e.message);
+          var root = document.getElementById('root');
+          if (root && (!root.children || root.children.length === 0)) {
+            root.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: sans-serif; direction: rtl; text-align: right;">' +
+              '<h2 style="color: #e11d48; margin-bottom: 1rem; font-weight: bold;">خطا در اجرای برنامه در نسخه اندروید</h2>' +
+              '<p style="color: #475569; font-size: 0.9rem;">' + (e.message || 'مشکلی در بارگذاری رخ داده است.') + '</p>' +
+              '<button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 0.375rem; cursor: pointer;">تلاش دوباره</button>' +
+              '</div>';
+          }
+        });
+      })();
     </script>
   </head>
   <body class="bg-background text-foreground antialiased">
