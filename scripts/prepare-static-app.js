@@ -39,6 +39,31 @@ function prepareStaticApp() {
     <title>سامانه مدیریت مجوز کار PTW و LOTO</title>
     <link rel="icon" href="./favicon.ico" />
     ${stylesCssFile ? `<link rel="stylesheet" href="./assets/${stylesCssFile}" />` : ""}
+    <script>
+      // Initialize hydration data for TanStack Start in static client app mode
+      window.__TSTR_DATA__ = window.__TSTR_DATA__ || {
+        manifest: { routes: {} },
+        state: { dehydrated: { mutations: [], queries: [] } }
+      };
+
+      // Redirect root static path to hash route if hash is empty in file/app environments
+      if (!window.location.hash && (window.location.protocol === 'file:' || window.location.protocol === 'capacitor:' || (window.navigator?.userAgent || '').toLowerCase().includes('electron') || window.location.pathname.endsWith('.html') || window.location.pathname.includes('android_asset'))) {
+        window.location.hash = '#/';
+      }
+
+      // Fallback global error boundary for webview / electron debugging
+      window.addEventListener('error', function(e) {
+        console.error('PTW System Global Error:', e.error || e.message);
+        var root = document.getElementById('root');
+        if (root && (!root.children || root.children.length === 0)) {
+          root.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: sans-serif; dir: rtl;">' +
+            '<h2 style="color: #e11d48; margin-bottom: 1rem;">خطا در اجرای برنامه</h2>' +
+            '<p style="color: #475569; font-size: 0.9rem;">' + (e.message || 'مشکلی در بارگذاری رخ داده است.') + '</p>' +
+            '<button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 0.375rem; cursor: pointer;">تلاش دوباره</button>' +
+            '</div>';
+        }
+      });
+    </script>
   </head>
   <body class="bg-background text-foreground antialiased">
     <div id="root"></div>
