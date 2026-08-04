@@ -2,5 +2,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    ptw_system::run();
+    ptw_system_lib::run();
 }
+
