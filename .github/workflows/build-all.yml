@@ -54,6 +54,7 @@ jobs:
           releaseBody: 'Automated Tauri v2 Windows Release'
           releaseDraft: false
           prerelease: false
+          runner: npm
 
       - name: Prepare Tauri Artifacts
         shell: powershell

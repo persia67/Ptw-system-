@@ -1042,6 +1042,8 @@ function PermitDetail() {
         <OtpVerificationModal
           open={otpModalOpen}
           person={otpTargetPerson}
+          signerPerson={otpTargetPerson}
+          stepTitle="بررسی و تایید مجوز"
           onClose={() => {
             setOtpModalOpen(false);
             setPendingDecision(null);

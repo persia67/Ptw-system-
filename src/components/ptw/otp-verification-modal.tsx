@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
   ShieldCheck,
@@ -36,8 +36,9 @@ interface OtpVerificationModalProps {
   open: boolean;
   onClose: () => void;
   onVerified: (channel: MessengerChannel) => void;
-  signerPerson: Person;
-  stepTitle: string;
+  signerPerson?: Person;
+  person?: Person;
+  stepTitle?: string;
   otpConfig?: OtpConfig;
 }
 
@@ -46,14 +47,26 @@ export function OtpVerificationModal({
   onClose,
   onVerified,
   signerPerson,
-  stepTitle,
+  person,
+  stepTitle = "تایید امضا",
   otpConfig,
 }: OtpVerificationModalProps) {
+  const targetPerson: Person = useMemo(
+    () =>
+      signerPerson ||
+      person || {
+        name: "امضاکننده",
+        phone: "",
+        messengerType: "eitaa",
+      },
+    [signerPerson, person],
+  );
+
   const digitsCount = otpConfig?.digits || 6;
   const expiryDuration = otpConfig?.expirySeconds || 120;
 
   const [channel, setChannel] = useState<MessengerChannel>(
-    signerPerson.messengerType || otpConfig?.defaultChannel || "eitaa",
+    targetPerson.messengerType || otpConfig?.defaultChannel || "eitaa",
   );
   const [generatedCode, setGeneratedCode] = useState<string>("");
   const [inputCode, setInputCode] = useState<string>("");
@@ -72,30 +85,30 @@ export function OtpVerificationModal({
       setTimeLeft(expiryDuration);
       setInputCode("");
 
-      const msg = formatOtpMessage(code, signerPerson, stepTitle, otpConfig?.customMessageTemplate);
+      const msg = formatOtpMessage(code, targetPerson, stepTitle, otpConfig?.customMessageTemplate);
       setMessageText(msg);
 
       if (otpConfig?.webhookUrl) {
         setSending(true);
-        void sendOtpWebhook(otpConfig, signerPerson, code, msg).finally(() => setSending(false));
+        void sendOtpWebhook(otpConfig, targetPerson, code, msg).finally(() => setSending(false));
       }
 
       toast.info(`کد احراز هویت جدید به ${MESSENGERS[ch]?.nameFa || "پیام‌رسان"} ارسال گردید.`);
     },
-    [digitsCount, expiryDuration, otpConfig, signerPerson, stepTitle],
+    [digitsCount, expiryDuration, otpConfig, targetPerson, stepTitle],
   );
 
   // کلید شروع فرآیند OTP هنگام باز شدن مودال
   useEffect(() => {
     if (open) {
-      const targetChannel = signerPerson.messengerType || otpConfig?.defaultChannel || "eitaa";
+      const targetChannel = targetPerson.messengerType || otpConfig?.defaultChannel || "eitaa";
       setChannel(targetChannel);
       dispatchNewOtp(targetChannel);
     } else {
       setInputCode("");
       setGeneratedCode("");
     }
-  }, [open, dispatchNewOtp, signerPerson.messengerType, otpConfig?.defaultChannel]);
+  }, [open, dispatchNewOtp, targetPerson.messengerType, otpConfig?.defaultChannel]);
 
   const handleInputChange = (index: number, val: string) => {
     if (!/^\d*$/.test(val)) return;
@@ -151,7 +164,7 @@ export function OtpVerificationModal({
   const currentMessenger = MESSENGERS[channel] || MESSENGERS.eitaa;
   const deepLink = getMessengerDeepLink(
     channel,
-    signerPerson.messengerTarget || signerPerson.phone || "",
+    targetPerson.messengerTarget || targetPerson.phone || "",
     messageText,
   );
 
@@ -180,16 +193,16 @@ export function OtpVerificationModal({
             <div className="flex items-center justify-between">
               <span className="font-semibold text-foreground flex items-center gap-1.5">
                 <UserCheck className="size-4 text-emerald-600" />
-                امضاکننده: <strong className="text-sm">{signerPerson.name || "امضاکننده"}</strong>
+                امضاکننده: <strong className="text-sm">{targetPerson.name || "امضاکننده"}</strong>
               </span>
               <Badge variant="outline" className="bg-background font-medium">
-                {signerPerson.position || "مسئول مربوطه"}
+                {targetPerson.position || "مسئول مربوطه"}
               </Badge>
             </div>
             <div className="flex items-center justify-between text-muted-foreground pt-1 border-t border-border/50">
               <span className="flex items-center gap-1">
                 <Smartphone className="size-3.5" />
-                شماره/شناسه: {signerPerson.phone || signerPerson.messengerTarget || "ثبت‌نشده"}
+                شماره/شناسه: {targetPerson.phone || targetPerson.messengerTarget || "ثبت‌نشده"}
               </span>
               <span>مرحله: {stepTitle}</span>
             </div>
