@@ -55,6 +55,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           tauriScript: 'npx tauri'
+          args: '--ignore-version-mismatches'
 
       - name: Prepare Tauri Artifacts
         shell: powershell
