@@ -10,20 +10,18 @@ export const getRouter = () => {
 
     const protocol = window.location.protocol || "";
     const pathname = window.location.pathname || "";
-    const ua = window.navigator?.userAgent?.toLowerCase() || "";
     const win = window as unknown as {
       Capacitor?: unknown;
       capacitor?: unknown;
     };
 
+    // Only force hash history when strictly running in offline file://, capacitor://, or Android asset protocols.
+    // Web HTTP/HTTPS environments must use standard browser history for SSR hydration compatibility.
     return (
       protocol === "file:" ||
       protocol === "capacitor:" ||
-      ua.includes("electron") ||
       pathname.includes("android_asset") ||
-      (pathname.endsWith(".html") && pathname !== "/") ||
-      Boolean(win.Capacitor) ||
-      Boolean(win.capacitor)
+      (Boolean(win.Capacitor) && protocol !== "http:" && protocol !== "https:")
     );
   })();
 
