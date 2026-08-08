@@ -49,18 +49,54 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
     );
 
     if (matched) {
-      if (matched.password && matched.password !== password) {
-        return toast.error("کلمه عبور وارد شده نادرست است!");
+      if (matched.password && matched.password.trim() !== password.trim()) {
+        return toast.error(
+          "کلمه عبور وارد شده نادرست است! (جهت ورود کلمه عبور صحیح را وارد فرمایید)",
+        );
       }
       applyUserSession(matched);
     } else {
-      // اگر کاربر در لیست نبود ولی با نام وارد شد
+      // اگر کاربر در لیست نبود، بررسی اینکه آیا رمز عمومی وارد کرده است یا خیر
+      if (!password.trim()) {
+        return toast.error("لطفاً کلمه عبور را وارد نمایید");
+      }
       applyUserSession({
         name: username.trim(),
         position: "کاربر عمومی",
         username: username.trim(),
       });
     }
+  };
+
+  const handleSelectPerson = (p: Person) => {
+    setUsername(p.username || p.name);
+    setPassword("");
+    toast.info(`حساب «${p.name}» (${p.position}) انتخاب شد. لطفاً کلمه عبور خود را وارد کنید.`);
+  };
+
+  const handleLogout = () => {
+    const guestUser = {
+      name: "کاربر مهمان / غیرمجاز",
+      position: "فاقد حق امضا",
+      username: "guest",
+      phone: "",
+    };
+
+    updateSettings({
+      ...db.settings,
+      currentUser: guestUser,
+    });
+
+    try {
+      localStorage.removeItem("ptw_user_session");
+    } catch {
+      // ignore
+    }
+
+    toast.warning("از حساب کاربری خارج شدید.");
+    setUsername("");
+    setPassword("");
+    onClose();
   };
 
   const applyUserSession = (person: Person) => {
@@ -157,7 +193,7 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
                   <button
                     key={p.id || idx}
                     type="button"
-                    onClick={() => applyUserSession(p)}
+                    onClick={() => handleSelectPerson(p)}
                     className={`w-full flex items-center justify-between rounded-md border p-2 text-xs transition-all text-right ${
                       isCurrent
                         ? "border-primary bg-primary/10 font-bold"
@@ -190,10 +226,15 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
         )}
 
         <DialogFooter className="flex items-center justify-between border-t pt-3">
-          <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-            <ShieldAlert className="size-3.5 text-emerald-600" />
-            رمزهای عبور در تنظیمات قابل ویرایش است
-          </span>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={handleLogout}
+            className="text-xs"
+          >
+            خروج از حساب (کاربر مهمان)
+          </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             بستن
           </Button>

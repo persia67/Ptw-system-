@@ -1,9 +1,35 @@
 export type PermitTypeId =
   "hot" | "height" | "confined" | "cold" | "excavation" | "electrical" | "custom";
 
-export type PermitStatus = "draft" | "pending" | "active" | "suspended" | "cancelled" | "closed";
+export type PermitStatus =
+  | "draft"
+  | "pending_supervisor"
+  | "pending_hse"
+  | "pending_area_owner"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "pending"
+  | "active"
+  | "suspended"
+  | "cancelled"
+  | "closed";
 
 export type SignatureDecision = "approved" | "rejected";
+
+export interface PermitApproval {
+  id: string;
+  permit_id: string;
+  user_id?: string;
+  signer_name: string;
+  role: string;
+  status: "approved" | "rejected" | "pending";
+  comment?: string;
+  signed_at: string;
+  token?: string;
+  verification_hash?: string;
+  otp_verified?: boolean;
+}
 
 export type MessengerChannel = "eitaa" | "bale" | "whatsapp" | "telegram" | "sms" | "simulator";
 
@@ -154,6 +180,7 @@ export interface Permit {
 
   workflow: WorkflowStep[];
   signatures: StepSignature[];
+  approvals?: PermitApproval[];
   currentStepIndex: number;
 
   extensions: Extension[];
@@ -183,6 +210,8 @@ export interface Settings {
   currentUser: { name: string; position: string; username?: string; phone?: string };
   otpConfig?: OtpConfig;
   authConfig?: AuthConfig;
+  n8nWebhookUrl?: string;
+  n8nApiKey?: string;
 }
 
 export interface PtwDatabase {

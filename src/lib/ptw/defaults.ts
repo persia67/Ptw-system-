@@ -23,6 +23,12 @@ export const permitTypeShort = (id: PermitTypeId, custom?: string) =>
 
 export const STATUS_LABEL: Record<string, string> = {
   draft: "پیش‌نویس",
+  pending_supervisor: "در انتظار سرپرست",
+  pending_hse: "در انتظار واحد HSE",
+  pending_area_owner: "در انتظار مدیر منطقه",
+  approved: "تایید نهایی (صادرشده)",
+  rejected: "ردشده توسط مسئولین",
+  expired: "منقضی‌شده",
   pending: "در انتظار تایید",
   active: "فعال (صادر شده)",
   suspended: "معلق",

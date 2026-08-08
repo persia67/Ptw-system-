@@ -18,6 +18,9 @@ import {
   KeyRound,
   FileCheck2,
   BadgeCheck,
+  ShieldAlert,
+  LogIn,
+  UserCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,7 @@ import { SignaturePad } from "@/components/ptw/signature-pad";
 import { SignaturePreview } from "@/components/ptw/signature-preview";
 import { PermitPrintSheet } from "@/components/ptw/permit-print";
 import { OtpVerificationModal } from "@/components/ptw/otp-verification-modal";
+import { LoginModal } from "@/components/ptw/login-modal";
 import { usePtwDb } from "@/lib/ptw/use-ptw";
 import { permitTypeTitle } from "@/lib/ptw/defaults";
 import { JalaliDateTimeInput } from "@/components/ptw/jalali-datetime-input";
@@ -53,6 +57,12 @@ import {
   evt,
 } from "@/lib/ptw/workflow";
 import { generateSignatureHash, generateDeviceToken } from "@/lib/ptw/security";
+import {
+  buildPermitApprovals,
+  determineWorkflowStatus,
+  sendN8nPermitStatusWebhook,
+  getStatusTitleFa,
+} from "@/lib/ptw/n8n";
 import type { Permit, StepSignature, MessengerChannel, Person } from "@/lib/ptw/types";
 
 export const Route = createFileRoute("/permits/$permitId")({
@@ -74,6 +84,51 @@ export const Route = createFileRoute("/permits/$permitId")({
   component: PermitDetail,
 });
 
+function isRoleMatching(userPosition: string, requiredRoleTitle: string): boolean {
+  if (!userPosition || !requiredRoleTitle) return false;
+  const pos = userPosition.trim().toLowerCase();
+  const req = requiredRoleTitle.trim().toLowerCase();
+
+  if (pos.includes("مدیر ارشد") || pos.includes("مدیر سیستم") || pos.includes("admin")) {
+    return true;
+  }
+  if (pos === req || pos.includes(req) || req.includes(pos)) {
+    return true;
+  }
+  if (
+    (req.includes("ایمنی") || req.includes("hse")) &&
+    (pos.includes("ایمنی") || pos.includes("hse"))
+  ) {
+    return true;
+  }
+  if (
+    (req.includes("مدیر") || req.includes("رئیس") || req.includes("مدیریت")) &&
+    (pos.includes("مدیر") || pos.includes("رئیس") || pos.includes("فنی") || pos.includes("کارخانه"))
+  ) {
+    return true;
+  }
+  if (
+    (req.includes("برق") || req.includes("تعمیرات")) &&
+    (pos.includes("برق") || pos.includes("تعمیرات"))
+  ) {
+    return true;
+  }
+  if (
+    (req.includes("سرپرست") || req.includes("بهره‌برداری")) &&
+    (pos.includes("سرپرست") || pos.includes("بهره‌برداری"))
+  ) {
+    return true;
+  }
+  if (
+    (req.includes("مجری") || req.includes("پیمانکار")) &&
+    (pos.includes("مجری") || pos.includes("پیمانکار") || pos.includes("استاد"))
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function PermitDetail() {
   const { permitId } = Route.useParams();
   const { db, ready, upsertPermit, deletePermit } = usePtwDb();
@@ -88,6 +143,9 @@ function PermitDetail() {
     sig: StepSignature;
     stepTitle: string;
   } | null>(null);
+
+  // Login modal state
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   // OTP Verification state
   const [otpModalOpen, setOtpModalOpen] = useState(false);
@@ -135,17 +193,37 @@ function PermitDetail() {
 
   const decide = async (decision: "approved" | "rejected", forceOtp = false) => {
     if (!step) return;
-    const nameToUse = signName.trim() || db.settings.currentUser.name;
+
+    const currentUser = db.settings.currentUser;
+    const isAuthorized = isRoleMatching(currentUser.position || "", step.roleTitle);
+
+    if (!isAuthorized) {
+      toast.error(
+        `عدم دسترسی: شما با حساب «${currentUser.name}» (${currentUser.position}) وارد شده‌اید و مجاز به ثبت امضا برای نقش «${step.roleTitle}» نیستید.`,
+      );
+      setLoginModalOpen(true);
+      return;
+    }
+
+    const nameToUse = currentUser.name || signName.trim();
     if (!nameToUse) return toast.error("نام امضاکننده را وارد کنید");
     if (decision === "rejected" && !signComment.trim()) return toast.error("دلیل رد را بنویسید");
 
-    // Check optional manager security PIN
+    // بررسی رمز امنیتی PIN یا کلمه عبور مدیر/مسئول مربوطه
     const matchedPerson = (db.settings.people || []).find(
-      (p) => p.name.trim().toLowerCase() === nameToUse.toLowerCase(),
+      (p) =>
+        p.name.trim().toLowerCase() === nameToUse.toLowerCase() ||
+        (p.username &&
+          p.username.trim().toLowerCase() === currentUser.username?.trim().toLowerCase()),
     );
+
     if (matchedPerson?.pin && matchedPerson.pin.trim()) {
       if (!signPin || signPin.trim() !== matchedPerson.pin.trim()) {
         return toast.error("رمز امنیتی PIN واردشده برای این مدیر/مسئول صحیح نیست!");
+      }
+    } else if (matchedPerson?.password && matchedPerson.password.trim()) {
+      if (!signPin || signPin.trim() !== matchedPerson.password.trim()) {
+        return toast.error("کلمه عبور واردشده برای این مدیر/مسئول صحیح نیست!");
       }
     }
 
@@ -206,35 +284,50 @@ function PermitDetail() {
       deviceSignatureToken: deviceToken,
     };
 
-    if (decision === "rejected") {
-      save(
-        {
-          signatures: [...permit.signatures.filter((s) => s.stepId !== step.id), signature],
-          currentStepIndex: Math.max(0, permit.currentStepIndex - 1),
-        },
-        evt("rejected", signature.name, `مرحله «${step.title}» رد شد: ${signComment}`),
-      );
-      toast.warning("مرحله رد شد و مجوز به مرحله قبل بازگشت");
-    } else {
-      const nextIndex = permit.currentStepIndex + 1;
-      const finished = nextIndex >= steps.length;
-      save(
-        {
-          signatures: [...permit.signatures.filter((s) => s.stepId !== step.id), signature],
-          currentStepIndex: finished ? steps.length : nextIndex,
-          status: finished ? "active" : "pending",
-        },
+    const newSignatures = [...permit.signatures.filter((s) => s.stepId !== step.id), signature];
+    const nextIndex =
+      decision === "rejected"
+        ? Math.max(0, permit.currentStepIndex - 1)
+        : permit.currentStepIndex + 1;
+    const finished = decision !== "rejected" && nextIndex >= steps.length;
+
+    const updatedPermit: Permit = {
+      ...permit,
+      signatures: newSignatures,
+      currentStepIndex: finished ? steps.length : nextIndex,
+      updatedAt: new Date().toISOString(),
+      events: [
+        ...permit.events,
         evt(
-          finished ? "issued" : "approved",
+          decision === "rejected" ? "rejected" : finished ? "issued" : "approved",
           signature.name,
-          finished
-            ? "تمام تاییدها انجام شد و مجوز صادر گردید"
-            : `مرحله «${step.title}» ${otpChannel ? "با احراز هویت پیام‌رسان" : ""} تایید شد`,
+          decision === "rejected"
+            ? `مرحله «${step.title}» رد شد: ${signComment}`
+            : finished
+              ? "تمام تاییدها انجام شد و مجوز با موفقیت صادر گردید"
+              : `مرحله «${step.title}» ${otpChannel ? "با احراز هویت پیام‌رسان" : ""} تایید شد`,
         ),
-      );
+      ],
+    };
+
+    updatedPermit.status = determineWorkflowStatus(updatedPermit);
+    updatedPermit.approvals = buildPermitApprovals(updatedPermit);
+
+    upsertPermit(updatedPermit);
+
+    // ارسال خودکار رویداد به n8n webhook
+    sendN8nPermitStatusWebhook(updatedPermit, db.settings, signature.name).then((res) => {
+      if (res.success) {
+        toast.info("رویداد تغییر وضعیت به n8n ارسال شد");
+      }
+    });
+
+    if (decision === "rejected") {
+      toast.warning("مرحله رد شد و وضعیت به حالت ردشده تغییر یافت");
+    } else {
       toast.success(
         finished
-          ? "امضا با احراز هویت و رمزنگاری SHA-256 ثبت گردید"
+          ? "تایید نهایی و امضا با رمزشناسی SHA-256 و متصاعدشدن رویداد n8n ثبت گردید"
           : `امضا ثبت شد ${otpChannel ? "(احراز هویت شده توسط پیام‌رسان)" : ""}`,
       );
     }
@@ -400,114 +493,145 @@ function PermitDetail() {
                     </p>
                   )}
 
-                  {db.settings.people && db.settings.people.length > 0 && (
-                    <div className="rounded-md border border-border bg-background p-3">
-                      <Label className="mb-1.5 block text-xs text-muted-foreground">
-                        انتخاب سریع از فهرست مسئولین مجاز:
-                      </Label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {db.settings.people.map((p, idx) => (
+                  {(() => {
+                    const currentUser = db.settings.currentUser;
+                    const isAuthorized = isRoleMatching(currentUser.position || "", step.roleTitle);
+
+                    if (!isAuthorized) {
+                      return (
+                        <div className="rounded-lg border-2 border-amber-500/40 bg-amber-500/10 p-4 space-y-3">
+                          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
+                            <ShieldAlert className="size-5 text-amber-600 shrink-0" />
+                            عدم تطابق نقش کاربری — ثبت امضا غیرمجاز است
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            تایید مرحله «<strong>{step.title}</strong>» منحصراً در صلاحیت سمت «
+                            <strong>{step.roleTitle}</strong>» است. شما با حساب «
+                            <strong>{currentUser.name}</strong>» (
+                            {currentUser.position || "بدون نقش"}) وارد شده‌اید و امکان صدور تاییدیه
+                            به جای این مقام وجود ندارد.
+                          </p>
                           <Button
-                            key={idx}
                             type="button"
-                            variant={signName === p.name ? "default" : "outline"}
                             size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              setSignName(p.name);
-                            }}
+                            onClick={() => setLoginModalOpen(true)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow"
                           >
-                            {p.name} ({p.position})
-                            {p.pin ? <KeyRound className="me-1 size-3 text-warning" /> : null}
+                            <LogIn className="size-3.5" />
+                            ورود با حساب کاربری {step.roleTitle}
                           </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      );
+                    }
 
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div>
-                      <Label className="text-xs font-semibold">
-                        نام و نام خانوادگی امضاکننده *
-                      </Label>
-                      <Input
-                        value={signName}
-                        onChange={(e) => setSignName(e.target.value)}
-                        placeholder="مثلاً: مهندس رضایی"
-                        maxLength={80}
-                      />
-                    </div>
-                    <div>
-                      <Label className="flex items-center gap-1 text-xs font-semibold">
-                        <KeyRound className="size-3 text-primary" />
-                        رمز امنیتی PIN (در صورت تعریف)
-                      </Label>
-                      <Input
-                        type="password"
-                        value={signPin}
-                        onChange={(e) => setSignPin(e.target.value)}
-                        placeholder="****"
-                        maxLength={10}
-                        className="font-mono text-center tracking-widest"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs font-semibold">
-                        توضیح / دلیل (در صورت رد الزامی)
-                      </Label>
-                      <Input
-                        value={signComment}
-                        onChange={(e) => setSignComment(e.target.value)}
-                        placeholder="توضیحات تایید یا علت رد"
-                        maxLength={300}
-                      />
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        <div className="rounded-md border border-primary/20 bg-background p-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="size-4 text-primary shrink-0" />
+                            <div>
+                              <span className="text-[11px] text-muted-foreground block">
+                                امضاکننده مجاز مرحله ({step.roleTitle}):
+                              </span>
+                              <span className="text-sm font-bold text-foreground me-2">
+                                {currentUser.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                ({currentUser.position})
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLoginModalOpen(true)}
+                            className="h-7 text-xs gap-1"
+                          >
+                            <LogIn className="size-3" />
+                            تغییر حساب
+                          </Button>
+                        </div>
 
-                  <div>
-                    <Label className="mb-1 block text-xs font-semibold">
-                      محل رسم امضای دیجیتال:
-                    </Label>
-                    <SignaturePad value={signData} onChange={setSignData} signerName={signName} />
-                  </div>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div>
+                            <Label className="flex items-center gap-1 text-xs font-semibold">
+                              <KeyRound className="size-3 text-primary" />
+                              رمز امنیتی PIN یا کلمه عبور (الزامی)
+                            </Label>
+                            <Input
+                              type="password"
+                              value={signPin}
+                              onChange={(e) => setSignPin(e.target.value)}
+                              placeholder="کلمه عبور یا PIN حساب خود را وارد نمایید"
+                              className="font-mono text-center tracking-widest mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold">
+                              توضیح / دلیل (در صورت رد الزامی)
+                            </Label>
+                            <Input
+                              value={signComment}
+                              onChange={(e) => setSignComment(e.target.value)}
+                              placeholder="توضیحات تایید یا علت رد"
+                              maxLength={300}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Button onClick={() => decide("approved")} className="gap-2 bg-primary">
-                        <CheckCircle2 className="size-4" />
-                        تایید و امضای رسمی
-                        {db.settings.otpConfig?.enabled && (
-                          <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-mono">
-                            + OTP
-                          </span>
-                        )}
-                      </Button>
+                        <div>
+                          <Label className="mb-1 block text-xs font-semibold">
+                            محل رسم امضای دیجیتال:
+                          </Label>
+                          <SignaturePad
+                            value={signData}
+                            onChange={setSignData}
+                            signerName={currentUser.name}
+                          />
+                        </div>
 
-                      {/* دکمه اختصاصی امضا با ارسال OTP به پیام‌رسان‌ها */}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => decide("approved", true)}
-                        className="gap-2 border-emerald-500/50 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                      >
-                        <ShieldCheck className="size-4 text-emerald-600" />
-                        احراز هویت با پیام‌رسان (ایتا/بله/واتساپ/تلگرام)
-                      </Button>
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                          <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => decide("approved")} className="gap-2 bg-primary">
+                              <CheckCircle2 className="size-4" />
+                              تایید و امضای رسمی
+                              {db.settings.otpConfig?.enabled && (
+                                <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-mono">
+                                  + OTP
+                                </span>
+                              )}
+                            </Button>
 
-                      <Button
-                        variant="destructive"
-                        onClick={() => decide("rejected")}
-                        className="gap-2"
-                      >
-                        <XCircle className="size-4" />
-                        رد و بازگشت به مرحله قبل
-                      </Button>
-                    </div>
-                    <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Fingerprint className="size-3.5 text-primary" />
-                      امضا با مشخصات مرورگر و هش SHA-256 پلمپ دیجیتال می‌شود.
-                    </p>
-                  </div>
+                            {/* دکمه اختصاصی امضا با ارسال OTP به پیام‌رسان‌ها */}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => decide("approved", true)}
+                              className="gap-2 border-emerald-500/50 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                            >
+                              <ShieldCheck className="size-4 text-emerald-600" />
+                              احراز هویت با پیام‌رسان (ایتا/بله/واتساپ/تلگرام)
+                            </Button>
+
+                            <Button
+                              variant="destructive"
+                              onClick={() => decide("rejected")}
+                              className="gap-2"
+                            >
+                              <XCircle className="size-4" />
+                              رد و بازگشت به مرحله قبل
+                            </Button>
+                          </div>
+                          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Fingerprint className="size-3.5 text-primary" />
+                            امضا با مشخصات مرورگر و هش SHA-256 پلمپ دیجیتال می‌شود.
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </>
             )}
@@ -1053,6 +1177,9 @@ function PermitDetail() {
           }}
         />
       )}
+
+      {/* مدال تغییر کاربر / ورود با حساب مسئول مربوطه */}
+      <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
     </div>
   );
 }

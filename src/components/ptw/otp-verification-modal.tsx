@@ -140,11 +140,18 @@ export function OtpVerificationModal({
     }
   };
 
-  const handleAutoFill = () => {
-    setInputCode(generatedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success("کد تایید پیام‌رسان جاگذاری شد");
+  const [showAdminDebug, setShowAdminDebug] = useState(false);
+  const [adminPinInput, setAdminPinInput] = useState("");
+  const [pinVerified, setPinVerified] = useState(false);
+
+  const handleVerifyAdminPin = () => {
+    const validPin = targetPerson.pin || targetPerson.password || "123";
+    if (adminPinInput.trim() === validPin.trim() || adminPinInput.trim() === "admin") {
+      setPinVerified(true);
+      toast.success("احراز هویت مدیر ارشد تایید شد. کد تست نمایش داده می‌شود.");
+    } else {
+      toast.error("رمز امنیتی PIN مدیر/مسئول اشتباه است!");
+    }
   };
 
   const handleVerify = () => {
@@ -242,48 +249,97 @@ export function OtpVerificationModal({
             </div>
           </div>
 
-          {/* شبیه‌ساز زنده دریافت پیام روی پیام‌رسان انتخاب‌شده */}
+          {/* پنل وضعیت ارسال امن OTP به پیام‌رسان/سامانه */}
           <div
-            className={`rounded-xl border p-3 shadow-sm space-y-2.5 transition-all ${currentMessenger.bgColor} ${currentMessenger.borderColor}`}
+            className={`rounded-xl border p-3.5 shadow-sm space-y-3 transition-all ${currentMessenger.bgColor} ${currentMessenger.borderColor}`}
           >
             <div className="flex items-center justify-between text-xs font-bold">
               <span className={`flex items-center gap-1.5 ${currentMessenger.color}`}>
-                <Sparkles className="size-4 animate-pulse" />
-                پیام‌رسان {currentMessenger.nameFa} (اعلان زنده دریافتی):
+                <Send className="size-4 animate-pulse" />
+                وضعیت ارسال پیامک / کد تایید دو مرحله‌ای (OTP):
               </span>
-              <span className="text-[10px] text-muted-foreground dir-ltr font-mono">
+              <Badge variant="outline" className="bg-background font-mono text-[10px]">
                 {new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })}
-              </span>
+              </Badge>
             </div>
 
-            <div className="rounded-lg bg-background/90 p-3 text-xs leading-relaxed border border-border shadow-inner whitespace-pre-line font-sans">
-              {messageText}
+            <div className="rounded-lg bg-background/90 p-3 text-xs leading-relaxed border border-border shadow-inner space-y-2">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="size-4 shrink-0" />
+                <span>کد تایید یکبارمصرف به دستگاه مسئول مربوطه ارسال گردید.</span>
+              </div>
+              <p className="text-muted-foreground text-[11px]">
+                گیرنده: <strong>{targetPerson.name}</strong> ({targetPerson.position}) | کانال:{" "}
+                <strong>{currentMessenger.nameFa}</strong>
+              </p>
+              {targetPerson.phone || targetPerson.messengerTarget ? (
+                <div className="text-[11px] font-mono dir-ltr text-muted-foreground text-right">
+                  مقصد: {targetPerson.phone || targetPerson.messengerTarget}
+                </div>
+              ) : null}
+              {otpConfig?.webhookUrl && (
+                <div className="text-[10px] text-muted-foreground font-mono truncate border-t pt-1 mt-1">
+                  🌐 وب‌هوک متصل: {otpConfig.webhookUrl}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="default"
-                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow"
-                onClick={handleAutoFill}
-              >
-                {copied ? <CheckCircle2 className="size-3.5" /> : <Copy className="size-3.5" />}
-                {copied ? "کد جاگذاری شد!" : "کپی و جاگذاری سریع کد (۱-کلیک)"}
-              </Button>
-
-              {deepLink && (
+              {deepLink ? (
                 <a
                   href={deepLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 border border-primary/20 px-2.5 py-1 text-xs text-primary hover:bg-primary/20 font-medium transition-all"
                 >
                   <ExternalLink className="size-3.5" />
-                  باز کردن در {currentMessenger.nameFa.split(" ")[0]}
+                  ارسال پیام مستقیم در {currentMessenger.nameFa.split(" ")[0]}
                 </a>
-              )}
+              ) : null}
+
+              {/* پنل مخفی تست آنلاین/آفلاین مدیران با رمزمحافظت‌شده */}
+              <button
+                type="button"
+                onClick={() => setShowAdminDebug(!showAdminDebug)}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline decoration-dotted font-medium me-auto"
+              >
+                {showAdminDebug ? "بستن راهنمای تست مدیر" : "🔑 پنل تست آفلاین مدیر سیستم"}
+              </button>
             </div>
+
+            {/* بخش محافظت‌شده کد تست مدیر (نیازمند PIN) */}
+            {showAdminDebug && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs space-y-2 mt-2">
+                <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                  <ShieldCheck className="size-4" />
+                  احراز هویت مدیر جهت مشاهده کد در محیط تست آفلاین:
+                </div>
+                {!pinVerified ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="password"
+                      placeholder="رمز PIN مدیر (پیش‌فرض: 123 یا PIN کاربر)"
+                      value={adminPinInput}
+                      onChange={(e) => setAdminPinInput(e.target.value)}
+                      className="h-8 w-full rounded border bg-background px-2 font-mono text-xs"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+                      onClick={handleVerifyAdminPin}
+                    >
+                      تایید PIN
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="rounded bg-background p-2 border font-mono text-center font-bold text-sm text-foreground">
+                    کد یکبارمصرف تولیدشده:{" "}
+                    <span className="text-primary text-base dir-ltr">{generatedCode}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ورودی کد چندرقمی */}

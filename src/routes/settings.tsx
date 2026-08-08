@@ -517,6 +517,47 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <RefreshCw className="size-5 text-primary" />
+            تنظیمات اتصال به n8n و گردش کار خودکار (n8n Webhook Integration)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            با پیکربندی این بخش، تمام رویدادهای ثبت، تغییر وضعیت و امضای مجوزها متصاعدشده (Event:{" "}
+            <code>PermitStatusChanged</code>) و به آدرس وب‌هوک n8n ارسال می‌شود تا اعلان‌ها و
+            فرآیندهای تایید خودکار در پیام‌رسان‌ها / ایمیل انجام پذیرد.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <Label className="text-xs font-semibold">
+                آدرس وب‌هوک اصلی n8n (N8N_WEBHOOK_URL)
+              </Label>
+              <Input
+                value={s.n8nWebhookUrl || ""}
+                onChange={(e) => setS({ ...s, n8nWebhookUrl: e.target.value })}
+                placeholder="https://n8n.your-company.com/webhook/ptw-permit-status-changed"
+                className="mt-1 font-mono text-xs dir-ltr text-right"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">
+                کلید یا توکن احراز هویت API n8n (N8N_API_KEY)
+              </Label>
+              <Input
+                type="password"
+                value={s.n8nApiKey || ""}
+                onChange={(e) => setS({ ...s, n8nApiKey: e.target.value })}
+                placeholder="ptw_n8n_secret_token_2026"
+                className="mt-1 font-mono text-xs dir-ltr text-center"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">مراحل گردش تایید و امضا</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

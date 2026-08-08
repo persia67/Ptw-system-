@@ -28,6 +28,11 @@ import {
 import { JalaliDateTimeInput } from "@/components/ptw/jalali-datetime-input";
 import { fromLocalInput, toLocalInput, jalaliYear } from "@/lib/ptw/date";
 import { evt, nextPermitNumber, uid } from "@/lib/ptw/workflow";
+import {
+  buildPermitApprovals,
+  determineWorkflowStatus,
+  sendN8nPermitStatusWebhook,
+} from "@/lib/ptw/n8n";
 import type { ChecklistAnswer, GasReading, LotoLock, Permit, PermitTypeId } from "@/lib/ptw/types";
 
 export const Route = createFileRoute("/permits/new")({
@@ -169,15 +174,15 @@ function NewPermit() {
     return null;
   };
 
-  const build = (status: Permit["status"]): Permit => {
+  const build = (initialStatus: Permit["status"]): Permit => {
     const now = new Date().toISOString();
     const actor = db.settings.currentUser.name || "کاربر سامانه";
-    return {
+    const tempPermit: Permit = {
       id: uid(),
       number,
       type,
       customTypeTitle: type === "custom" ? customTypeTitle : undefined,
-      status,
+      status: initialStatus === "draft" ? "draft" : "pending_supervisor",
       unit,
       location,
       description,
@@ -200,25 +205,42 @@ function NewPermit() {
       extensions: [],
       events: [
         evt("created", actor, `مجوز ${number} ایجاد شد`),
-        ...(status === "pending"
-          ? [evt("submitted", actor, "مجوز برای طی مراحل تایید ارسال شد")]
+        ...(initialStatus !== "draft"
+          ? [evt("submitted", actor, "مجوز جهت تایید و امضا به جریان افتاد")]
           : []),
       ],
       createdBy: actor,
       createdAt: now,
       updatedAt: now,
     };
+
+    if (initialStatus !== "draft") {
+      tempPermit.status = determineWorkflowStatus(tempPermit);
+    }
+
+    tempPermit.approvals = buildPermitApprovals(tempPermit);
+    return tempPermit;
   };
 
-  const submit = (status: Permit["status"]) => {
+  const submit = async (requestedStatus: Permit["status"]) => {
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
-    const permit = build(status);
+    const permit = build(requestedStatus);
     upsertPermit(permit);
-    toast.success(status === "draft" ? "پیش‌نویس ذخیره شد" : "مجوز ثبت و وارد چرخه تایید شد");
+
+    // ارسال رویداد PermitStatusChanged به وب‌هوک n8n
+    sendN8nPermitStatusWebhook(permit, db.settings, permit.createdBy).then((res) => {
+      if (res.success) {
+        toast.info("اطلاعات پرمیت به رویداد n8n ارسال شد");
+      }
+    });
+
+    toast.success(
+      requestedStatus === "draft" ? "پیش‌نویس ذخیره شد" : "مجوز ثبت و وارد چرخه تایید خودکار شد",
+    );
     navigate({ to: "/permits/$permitId", params: { permitId: permit.id } });
   };
 
