@@ -9,7 +9,7 @@ if (!fs.existsSync(iconsDir)) {
 const faviconPath = path.join(process.cwd(), "public", "favicon.ico");
 const targetIcoPath = path.join(iconsDir, "icon.ico");
 
-// Sync favicon.ico between public and src-tauri/icons
+// Ensure favicon.ico and targetIcoPath exist and are synced
 if (fs.existsSync(targetIcoPath) && !fs.existsSync(faviconPath)) {
   fs.copyFileSync(targetIcoPath, faviconPath);
 } else if (fs.existsSync(faviconPath) && !fs.existsSync(targetIcoPath)) {
