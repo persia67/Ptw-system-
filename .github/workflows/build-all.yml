@@ -38,6 +38,11 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Clean Previous Builds
+        shell: powershell
+        run: |
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "src-tauri/target/release/bundle"
+
       - name: Install Node Dependencies
         run: npm install
 
