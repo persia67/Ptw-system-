@@ -10,17 +10,28 @@ export const getRouter = () => {
 
     const protocol = window.location.protocol || "";
     const pathname = window.location.pathname || "";
+    const hostname = window.location.hostname || "";
+    const userAgent = navigator && navigator.userAgent ? navigator.userAgent.toLowerCase() : "";
     const win = window as unknown as {
       Capacitor?: unknown;
       capacitor?: unknown;
+      __TAURI__?: unknown;
+      __TAURI_INTERNALS__?: unknown;
     };
 
-    // Only force hash history when strictly running in offline file://, capacitor://, or Android asset protocols.
-    // Web HTTP/HTTPS environments must use standard browser history for SSR hydration compatibility.
+    // Force hash history when running in Tauri (Windows/Mac/Linux), Electron, Capacitor,
+    // Android WebViews, or offline file:// protocols.
     return (
       protocol === "file:" ||
       protocol === "capacitor:" ||
+      protocol === "tauri:" ||
+      hostname.includes("tauri.localhost") ||
+      userAgent.includes("tauri") ||
+      userAgent.includes("electron") ||
       pathname.includes("android_asset") ||
+      pathname.endsWith(".html") ||
+      Boolean(win.__TAURI__) ||
+      Boolean(win.__TAURI_INTERNALS__) ||
       (Boolean(win.Capacitor) && protocol !== "http:" && protocol !== "https:")
     );
   })();

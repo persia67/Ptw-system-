@@ -55,14 +55,19 @@ function prepareStaticApp() {
           var host = window.location.hostname || '';
           var port = window.location.port || '';
 
-          // Detect if running inside Android APK, Capacitor, Electron, or static file/webview
+          // Detect if running inside Tauri (Windows/Mac/Linux), Android APK, Capacitor, Electron, or static file/webview
           var isApp = proto === 'file:' ||
                       proto === 'capacitor:' ||
+                      proto === 'tauri:' ||
+                      host.indexOf('tauri.localhost') !== -1 ||
                       ua.indexOf('electron') !== -1 ||
+                      ua.indexOf('tauri') !== -1 ||
                       path.indexOf('.html') !== -1 ||
                       path.indexOf('android_asset') !== -1 ||
                       Boolean(window.Capacitor) ||
-                      Boolean(window.capacitor);
+                      Boolean(window.capacitor) ||
+                      Boolean(window.__TAURI__) ||
+                      Boolean(window.__TAURI_INTERNALS__);
 
           if (isApp && (!window.location.hash || window.location.hash === '#' || window.location.hash === '')) {
             window.location.hash = '#/';
@@ -71,23 +76,30 @@ function prepareStaticApp() {
           console.error('PTW App Init Error:', e);
         }
 
-        // Fallback global error boundary for webview / electron debugging
+        // Fallback global error boundary for desktop app / webview debugging
         window.addEventListener('error', function(e) {
           console.error('PTW System Global Error:', e.error || e.message);
           var root = document.getElementById('root');
-          if (root && (!root.children || root.children.length === 0)) {
-            root.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: sans-serif; direction: rtl; text-align: right;">' +
-              '<h2 style="color: #e11d48; margin-bottom: 1rem; font-weight: bold;">خطا در اجرای برنامه در نسخه اندروید</h2>' +
-              '<p style="color: #475569; font-size: 0.9rem;">' + (e.message || 'مشکلی در بارگذاری رخ داده است.') + '</p>' +
-              '<button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 0.375rem; cursor: pointer;">تلاش دوباره</button>' +
-              '</div>';
+          if (root && (!root.children || root.children.length === 0 || root.querySelector('.ptw-app-loader'))) {
+            root.innerHTML = '<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: #0f172a; color: #f8fafc; font-family: sans-serif; direction: rtl; text-align: right;">' +
+              '<div style="max-width: 480px; width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);">' +
+              '<h2 style="color: #f43f5e; margin-top: 0; margin-bottom: 0.75rem; font-weight: 700; font-size: 1.125rem;">خطا در اجرای سامانه PTW</h2>' +
+              '<p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">' + (e.message || 'مشکلی در بارگذاری نرم‌افزار رخ داده است.') + '</p>' +
+              '<button onclick="window.location.reload()" style="padding: 0.5rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 0.375rem; font-weight: 600; cursor: pointer;">تلاش دوباره</button>' +
+              '</div></div>';
           }
         });
       })();
     </script>
   </head>
   <body class="bg-background text-foreground antialiased">
-    <div id="root"></div>
+    <div id="root">
+      <div class="ptw-app-loader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
+        <div style="width: 44px; height: 44px; border: 4px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: ptw-spin 0.8s linear infinite;"></div>
+        <h2 style="margin-top: 1.25rem; font-size: 1rem; font-weight: 600; color: #cbd5e1;">در حال بارگذاری سامانه PTW...</h2>
+        <style>@keyframes ptw-spin { to { transform: rotate(360deg); } }</style>
+      </div>
+    </div>
     ${indexJsFile ? `<script type="module" src="./assets/${indexJsFile}"></script>` : ""}
   </body>
 </html>
