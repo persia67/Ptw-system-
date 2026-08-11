@@ -20,6 +20,8 @@ jobs:
   build-tauri-windows:
     name: 🦀 Build Tauri v2 Windows Installer (.msi & .exe)
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Source Code
@@ -175,6 +177,8 @@ jobs:
     name: 🚀 Publish GitHub Release (Tauri v2, Windows & Android)
     needs: [build-tauri-windows, build-electron-windows, build-android]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
 
     steps:
@@ -211,6 +215,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
           name: PTW System Release v${{ steps.get_version.outputs.version }} (Tauri v2, Windows & Android)
           body: |
             ## 🚀 انتشار نسخه v${{ steps.get_version.outputs.version }} سامانه مدیریت مجوز کار PTW و LOTO
