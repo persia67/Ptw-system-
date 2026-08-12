@@ -26,7 +26,7 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ open, onClose }: AboutModalProps) {
-  const currentVersion = "v1.2.6";
+  const currentVersion = "v1.2.7";
   const githubReleaseUrl = "https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest";
 
   return (
@@ -125,17 +125,34 @@ export function AboutModal({ open, onClose }: AboutModalProps) {
                 <div className="flex items-center justify-between font-bold text-foreground">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="size-3.5 text-primary" />
-                    نسخه v1.2.6 — افزودن Tauri v2 & گردآوری به‌روزرسانی‌ها
+                    نسخه v1.2.7 — رفع کامل مشکل صفحه سفید در Tauri v2 & ویندوز
                   </span>
                   <span className="font-mono text-[11px] text-muted-foreground">آخرین نسخه</span>
+                </div>
+                <p className="pt-1 text-muted-foreground leading-relaxed">
+                  • بهبود تشخیص پروتکل‌های محلی Tauri v2 (`tauri://` و `tauri.localhost`) در روتر
+                  برنامه.
+                  <br />
+                  • اصلاح خطای کامپایل آیکون‌های ویندوز (RC2176 و DataView Offset) در فرآیند
+                  آماده‌سازی توری.
+                  <br />• افزودن لودر اولیه و صفحه‌بندی خطای هوشمند جهت جلوگیری از رندر صفحه سفید در
+                  تمام بسترهای نصبی.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                <div className="flex items-center justify-between font-semibold text-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="size-3.5 text-emerald-600" />
+                    نسخه v1.2.6 — افزودن Tauri v2 & گردآوری به‌روزرسانی‌ها
+                  </span>
                 </div>
                 <p className="pt-1 text-muted-foreground leading-relaxed">
                   • اضافه شدن فریم‌ورک فوق‌العاده سبک Tauri v2 جهت اجرا پرسرعت دسکتاپ ویندوز.
                   <br />
                   • تجمیع تمامی بخش‌ها و اطلاعات مربوط به دانلود و به‌روزرسانی در پنجره یکپارچه
                   درباره نرم‌افزار.
-                  <br />• ساخت خودکار و همزمان فایل‌های نصبی Windows (.exe & .msi) و Android (.apk)
-                  با هر تغییر در گیتهاب.
+                  <br />• ساخت خودکار و همزمان فایل‌های نصبی Windows (.exe & .msi) و Android (.apk).
                 </p>
               </div>
 
