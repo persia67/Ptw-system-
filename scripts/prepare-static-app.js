@@ -35,11 +35,16 @@ function prepareStaticApp() {
       let content = fs.readFileSync(filePath, "utf-8");
       let modified = false;
 
-      if (content.includes("hydrateRoot")) {
-        const patchedHydrate = content.replace(
-          /\(\s*0\s*,\s*(\w+)\.hydrateRoot\s*\)\s*\(\s*document\s*,/g,
-          `($1.createRoot(document.getElementById("root")||document.body)).render(`,
-        );
+      if (content.includes("hydrateRoot") || content.includes("createRoot")) {
+        const patchedHydrate = content
+          .replace(
+            /\(\s*0\s*,\s*(\w+)\.hydrateRoot\s*\)\s*\(\s*document\s*,/g,
+            `(0, $1.hydrateRoot)(document.getElementById("root")||document.body,`,
+          )
+          .replace(
+            /\(\s*(\w+)\.createRoot\s*\(\s*document\.getElementById\("root"\)\|\|document\.body\s*\)\s*\)\.render\s*\(/g,
+            `(0, $1.hydrateRoot)(document.getElementById("root")||document.body, `,
+          );
         if (patchedHydrate !== content) {
           content = patchedHydrate;
           modified = true;
