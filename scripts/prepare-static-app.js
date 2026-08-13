@@ -54,13 +54,25 @@ function prepareStaticApp() {
 
       if (content.includes("stores.matchesId.get().length")) {
         const patchedRouter = content.replace(
-          /(\w+)\.stores\.matchesId\.get\(\)\.length\|\|await bs\(\1\)/g,
-          `$1.stores.matchesId.get().length||(window.$_TSR?await bs($1):await $1.load())`,
+          /(\w+)\.stores\.matchesId\.get\(\)\.length\|\|await\s+(\w+)\(\1\)/g,
+          `$1.stores.matchesId.get().length||(window.$_TSR?.router?await $2($1):await $1.load())`,
         );
         if (patchedRouter !== content) {
           content = patchedRouter;
           modified = true;
           console.log(`⚡ Patched static router loader in asset: ${file}`);
+        }
+      }
+
+      if (content.includes("async function") && content.includes("window.$_TSR")) {
+        const patchedHydrateFunc = content.replace(
+          /async function (\w+)\((\w+)\)\{window\.\$_TSR\|\|/g,
+          `async function $1($2){if(!window.$_TSR||!window.$_TSR.router)return await $2.load();window.$_TSR||`,
+        );
+        if (patchedHydrateFunc !== content) {
+          content = patchedHydrateFunc;
+          modified = true;
+          console.log(`⚡ Patched static TSR hydration function guard in asset: ${file}`);
         }
       }
 
@@ -85,6 +97,13 @@ function prepareStaticApp() {
       (function() {
         try {
           // Initialize hydration data for TanStack Start in static client app mode
+          window.$_TSR = window.$_TSR || {
+            t: new Map(),
+            buffer: [],
+            initialized: true,
+            h: function() {},
+            router: null
+          };
           window.__TSTR_DATA__ = window.__TSTR_DATA__ || {
             manifest: { routes: {} },
             state: { dehydrated: { mutations: [], queries: [] } }
