@@ -66,8 +66,8 @@ function prepareStaticApp() {
 
       if (content.includes("async function") && content.includes("window.$_TSR")) {
         const patchedHydrateFunc = content.replace(
-          /async function (\w+)\((\w+)\)\{window\.\$_TSR\|\|/g,
-          `async function $1($2){if(!window.$_TSR||!window.$_TSR.router)return await $2.load();window.$_TSR||`,
+          /async function (\w+)\((\w+)\)\{(?:if\(!window\.\$_TSR\|\|!window\.\$_TSR\.router\)return await \2\.load\(\);)?window\.\$_TSR\|\|/g,
+          `async function $1($2){return await $2.load();`,
         );
         if (patchedHydrateFunc !== content) {
           content = patchedHydrateFunc;
@@ -102,7 +102,12 @@ function prepareStaticApp() {
             buffer: [],
             initialized: true,
             h: function() {},
-            router: null
+            router: {
+              matches: [],
+              manifest: { routes: {} },
+              dehydratedData: null,
+              lastMatchId: null
+            }
           };
           window.__TSTR_DATA__ = window.__TSTR_DATA__ || {
             manifest: { routes: {} },
