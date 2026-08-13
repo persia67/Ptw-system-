@@ -27,6 +27,42 @@ function prepareStaticApp() {
 
     indexJsFile = jsFiles.find((f) => f.startsWith("index-")) || jsFiles[0] || "";
     stylesCssFile = cssFiles.find((f) => f.startsWith("styles-")) || cssFiles[0] || "";
+
+    // Patch JS bundles to replace hydrateRoot(document, ...) with createRoot(document.getElementById("root")).render(...)
+    // and bypass SSR bs(e) when window.$_TSR is absent (Tauri, Electron, Android, WebViews)
+    jsFiles.forEach((file) => {
+      const filePath = path.join(assetsDir, file);
+      let content = fs.readFileSync(filePath, "utf-8");
+      let modified = false;
+
+      if (content.includes("hydrateRoot")) {
+        const patchedHydrate = content.replace(
+          /\(\s*0\s*,\s*(\w+)\.hydrateRoot\s*\)\s*\(\s*document\s*,/g,
+          `($1.createRoot(document.getElementById("root")||document.body)).render(`,
+        );
+        if (patchedHydrate !== content) {
+          content = patchedHydrate;
+          modified = true;
+          console.log(`⚡ Patched static react root rendering in asset: ${file}`);
+        }
+      }
+
+      if (content.includes("stores.matchesId.get().length")) {
+        const patchedRouter = content.replace(
+          /(\w+)\.stores\.matchesId\.get\(\)\.length\|\|await bs\(\1\)/g,
+          `$1.stores.matchesId.get().length||(window.$_TSR?await bs($1):await $1.load())`,
+        );
+        if (patchedRouter !== content) {
+          content = patchedRouter;
+          modified = true;
+          console.log(`⚡ Patched static router loader in asset: ${file}`);
+        }
+      }
+
+      if (modified) {
+        fs.writeFileSync(filePath, content, "utf-8");
+      }
+    });
   }
 
   console.log(`📌 Detected JS entry asset: ${indexJsFile || "none"}`);
@@ -76,17 +112,28 @@ function prepareStaticApp() {
           console.error('PTW App Init Error:', e);
         }
 
-        // Fallback global error boundary for desktop app / webview debugging
-        window.addEventListener('error', function(e) {
-          console.error('PTW System Global Error:', e.error || e.message);
+        function showErrorScreen(msg) {
           var root = document.getElementById('root');
           if (root && (!root.children || root.children.length === 0 || root.querySelector('.ptw-app-loader'))) {
             root.innerHTML = '<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: #0f172a; color: #f8fafc; font-family: sans-serif; direction: rtl; text-align: right;">' +
               '<div style="max-width: 480px; width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);">' +
               '<h2 style="color: #f43f5e; margin-top: 0; margin-bottom: 0.75rem; font-weight: 700; font-size: 1.125rem;">خطا در اجرای سامانه PTW</h2>' +
-              '<p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">' + (e.message || 'مشکلی در بارگذاری نرم‌افزار رخ داده است.') + '</p>' +
+              '<p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">' + (msg || 'مشکلی در بارگذاری نرم‌افزار رخ داده است.') + '</p>' +
               '<button onclick="window.location.reload()" style="padding: 0.5rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 0.375rem; font-weight: 600; cursor: pointer;">تلاش دوباره</button>' +
               '</div></div>';
+          }
+        }
+
+        // Fallback global error boundary for desktop app / webview debugging
+        window.addEventListener('error', function(e) {
+          console.error('PTW System Global Error:', e.error || e.message);
+          showErrorScreen(e.message);
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+          console.error('PTW System Promise Rejection:', e.reason);
+          if (e.reason && e.reason.message) {
+            showErrorScreen(e.reason.message);
           }
         });
       })();
