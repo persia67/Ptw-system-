@@ -28,51 +28,59 @@ function prepareStaticApp() {
     indexJsFile = jsFiles.find((f) => f.startsWith("index-")) || jsFiles[0] || "";
     stylesCssFile = cssFiles.find((f) => f.startsWith("styles-")) || cssFiles[0] || "";
 
-    // Patch JS bundles to replace hydrateRoot(document, ...) with createRoot(document.getElementById("root")).render(...)
-    // and bypass SSR bs(e) when window.$_TSR is absent (Tauri, Electron, Android, WebViews)
+    // Patch JS bundles to replace hydrateRoot with createRoot(...).render(...)
+    // and bypass SSR hydration when running in static/app mode
     jsFiles.forEach((file) => {
       const filePath = path.join(assetsDir, file);
       let content = fs.readFileSync(filePath, "utf-8");
       let modified = false;
 
+      // Replace hydrateRoot with createRoot(...).render(...)
       if (content.includes("hydrateRoot") || content.includes("createRoot")) {
         const patchedHydrate = content
           .replace(
             /\(\s*0\s*,\s*(\w+)\.hydrateRoot\s*\)\s*\(\s*document\s*,/g,
-            `(0, $1.hydrateRoot)(document.getElementById("root")||document.body,`,
+            `(0, $1.createRoot)(document.getElementById("root")||document.body).render(`,
           )
           .replace(
-            /\(\s*(\w+)\.createRoot\s*\(\s*document\.getElementById\("root"\)\|\|document\.body\s*\)\s*\)\.render\s*\(/g,
-            `(0, $1.hydrateRoot)(document.getElementById("root")||document.body, `,
+            /\(\s*0\s*,\s*(\w+)\.hydrateRoot\s*\)\s*\(\s*document\.getElementById\("root"\)\|\|document\.body\s*,\s*/g,
+            `(0, $1.createRoot)(document.getElementById("root")||document.body).render(`,
           );
         if (patchedHydrate !== content) {
           content = patchedHydrate;
           modified = true;
-          console.log(`⚡ Patched static react root rendering in asset: ${file}`);
+          console.log(
+            `⚡ Patched static react root rendering (hydrateRoot -> createRoot) in asset: ${file}`,
+          );
         }
       }
 
+      // Ensure router loads routes directly without waiting for SSR hydration
       if (content.includes("stores.matchesId.get().length")) {
         const patchedRouter = content.replace(
           /(\w+)\.stores\.matchesId\.get\(\)\.length\|\|await\s+(\w+)\(\1\)/g,
-          `$1.stores.matchesId.get().length||(window.$_TSR?.router?await $2($1):await $1.load())`,
+          `$1.stores.matchesId.get().length||await $1.load()`,
         );
         if (patchedRouter !== content) {
           content = patchedRouter;
           modified = true;
-          console.log(`⚡ Patched static router loader in asset: ${file}`);
+          console.log(`⚡ Patched static router loader (direct load) in asset: ${file}`);
         }
       }
 
-      if (content.includes("async function") && content.includes("window.$_TSR")) {
+      // Patch TSR hydration function to bypass SSR hydration and return e.load()
+      if (
+        content.includes("async function") &&
+        (content.includes("window.$_TSR") || content.includes("serializationAdapters"))
+      ) {
         const patchedHydrateFunc = content.replace(
-          /async function (\w+)\((\w+)\)\{(?:if\(!window\.\$_TSR\|\|!window\.\$_TSR\.router\)return await \2\.load\(\);)?window\.\$_TSR\|\|/g,
-          `async function $1($2){return await $2.load();`,
+          /async function (\w+)\((\w+)\)\{[\s\S]*?return routeChunkPromise;?\s*\}/g,
+          `async function $1($2){ return await $2.load(); }`,
         );
         if (patchedHydrateFunc !== content) {
           content = patchedHydrateFunc;
           modified = true;
-          console.log(`⚡ Patched static TSR hydration function guard in asset: ${file}`);
+          console.log(`⚡ Bypassed SSR hydration function in asset: ${file}`);
         }
       }
 
