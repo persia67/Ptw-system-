@@ -26,7 +26,7 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ open, onClose }: AboutModalProps) {
-  const currentVersion = "v1.2.8";
+  const currentVersion = "v1.2.9";
   const githubReleaseUrl = "https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest";
 
   return (
@@ -125,9 +125,24 @@ export function AboutModal({ open, onClose }: AboutModalProps) {
                 <div className="flex items-center justify-between font-bold text-foreground">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="size-3.5 text-primary" />
-                    نسخه v1.2.8 — رفع مشکل فریز شدن صفحات صدور مجوز و تنظیمات
+                    نسخه v1.2.9 — بهینه‌سازی زنجیره بیلد، مسیردهی و پایداری کامل
                   </span>
                   <span className="font-mono text-[11px] text-muted-foreground">آخرین نسخه</span>
+                </div>
+                <p className="pt-1 text-muted-foreground leading-relaxed">
+                  • تنظیم دقیق ترتیب اجرای اسکریپت‌های بیلد و تولید خروجی استاتیک.
+                  <br />
+                  • اصلاح مسیردهی داخلی و رفع کامل فریز در صفحات صدور مجوز و تنظیمات.
+                  <br />• ایمن‌سازی کامل مبدل تاریخ و تقویم جلالی در ورودی‌های زمان.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                <div className="flex items-center justify-between font-semibold text-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="size-3.5 text-emerald-600" />
+                    نسخه v1.2.8 — رفع مشکل فریز شدن صفحات صدور مجوز و تنظیمات
+                  </span>
                 </div>
                 <p className="pt-1 text-muted-foreground leading-relaxed">
                   • رفع کامل خطای `(0, createRoot) is not a function` و تثبیت رندرینگ ری‌اکت در نسخه

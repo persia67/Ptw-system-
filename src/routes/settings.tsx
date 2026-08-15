@@ -842,7 +842,7 @@ function SettingsPage() {
               <Info className="size-4 text-primary" />
               درباره نرم‌افزار و به‌روزرسانی‌ها
             </span>
-            <span className="text-xs font-mono font-semibold text-primary">v1.2.8</span>
+            <span className="text-xs font-mono font-semibold text-primary">v1.2.9</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
