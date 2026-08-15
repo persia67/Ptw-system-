@@ -62,9 +62,14 @@ function SettingsPage() {
   const [supported, setSupported] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
-    if (ready) setS(db.settings);
-  }, [ready, db.settings]);
+    if (ready && !initialized) {
+      setS(db.settings);
+      setInitialized(true);
+    }
+  }, [ready, initialized, db.settings]);
 
   useEffect(() => {
     setSupported(isSyncSupported());
@@ -837,7 +842,7 @@ function SettingsPage() {
               <Info className="size-4 text-primary" />
               درباره نرم‌افزار و به‌روزرسانی‌ها
             </span>
-            <span className="text-xs font-mono font-semibold text-primary">v1.2.6</span>
+            <span className="text-xs font-mono font-semibold text-primary">v1.2.8</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

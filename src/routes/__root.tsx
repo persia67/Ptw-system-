@@ -207,7 +207,7 @@ function AppContent() {
               <Link
                 key={item.to}
                 to={item.to}
-                preload="intent"
+                preload={false}
                 activeOptions={{ exact: item.to === "/" }}
                 className="flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 activeProps={{

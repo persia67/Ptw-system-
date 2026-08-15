@@ -117,12 +117,13 @@ function NewPermit() {
     setHasLoto(type === "electrical" || type === "confined");
   }, [type]);
 
+  const defaultHoursForType = db.settings.defaultDurationHours?.[type] ?? 8;
+
   useEffect(() => {
     if (!ready || !startAt) return;
-    const hours = db.settings.defaultDurationHours[type] ?? 8;
-    const end = new Date(new Date(startAt).getTime() + hours * 36e5);
+    const end = new Date(new Date(startAt).getTime() + defaultHoursForType * 36e5);
     setEndAt(toLocalInput(end.toISOString()));
-  }, [type, startAt, ready, db.settings.defaultDurationHours]);
+  }, [type, startAt, ready, defaultHoursForType]);
 
   const number = useMemo(() => nextPermitNumber(db.permits, jalaliYear()), [db.permits]);
 

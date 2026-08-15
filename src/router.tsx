@@ -47,7 +47,7 @@ export const getRouter = () => {
     context: { queryClient },
     history: isStaticOrAppEnv ? createHashHistory() : undefined,
     scrollRestoration: true,
-    defaultPreload: "intent",
+    defaultPreload: isStaticOrAppEnv ? false : "intent",
     defaultPreloadStaleTime: 1000 * 60 * 5,
   });
 

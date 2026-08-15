@@ -63,6 +63,18 @@ function prepareStaticApp() {
         }
       }
 
+      // Fix basepath: "." to basepath: "/" so routes match correctly in hash and static modes
+      if (content.includes("basepath:`.`") || content.includes('basepath:"."')) {
+        const patchedBasepath = content
+          .replace(/basepath:`\.`/g, "basepath:`/`")
+          .replace(/basepath:"\."/g, 'basepath:"/"');
+        if (patchedBasepath !== content) {
+          content = patchedBasepath;
+          modified = true;
+          console.log(`⚡ Patched static router basepath: "." to "/" in asset: ${file}`);
+        }
+      }
+
       // Patch TSR hydration function to bypass SSR hydration and return e.load()
       if (
         content.includes("async function") &&

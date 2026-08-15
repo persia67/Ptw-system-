@@ -5,6 +5,7 @@ import {
   jalaliToDate,
   toJalaliParts,
   toLocalInput,
+  parseSafeDate,
   fa,
 } from "@/lib/ptw/date";
 import {
@@ -28,17 +29,18 @@ export function JalaliDateTimeInput({
   onChange: (v: string) => void;
   id?: string;
 }) {
-  const base = value ? new Date(value) : new Date();
+  const base = parseSafeDate(value);
   const { jy, jm, jd } = toJalaliParts(base);
   const hh = base.getHours();
   const mi = base.getMinutes();
   const time = `${String(hh).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
 
   const emit = (ny: number, nm: number, nd: number, t: string) => {
-    const [h, m] = t.split(":").map((x) => Number(x) || 0);
+    const [h, m] = (t || "08:00").split(":").map((x) => Number(x) || 0);
     const maxD = jalaliMonthLength(ny, nm);
     const day = Math.min(nd, maxD);
-    onChange(toLocalInput(jalaliToDate(ny, nm, day, h, m).toISOString()));
+    const dt = jalaliToDate(ny, nm, day, h, m);
+    onChange(toLocalInput(dt.toISOString()));
   };
 
   const years = Array.from({ length: 7 }, (_, i) => jy - 1 + i);

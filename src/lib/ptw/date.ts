@@ -20,35 +20,53 @@ const faLong = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   day: "numeric",
 });
 
-export const toJalali = (iso?: string) => (iso ? faDate.format(new Date(iso)) : "—");
-export const toJalaliDateTime = (iso?: string) =>
-  iso ? faDateTime.format(new Date(iso)).replace("،", " —") : "—";
-export const toJalaliLong = (iso?: string) => (iso ? faLong.format(new Date(iso)) : "—");
+export function parseSafeDate(v?: string | Date | null): Date {
+  if (!v) return new Date();
+  if (v instanceof Date) return isNaN(v.getTime()) ? new Date() : v;
+  const d = new Date(v);
+  if (!isNaN(d.getTime())) return d;
+  if (typeof v === "string" && v.includes("T") && v.length === 16) {
+    const d2 = new Date(v + ":00");
+    if (!isNaN(d2.getTime())) return d2;
+  }
+  return new Date();
+}
 
-export const jalaliYear = (d = new Date()) =>
-  Number(
+export const toJalali = (iso?: string) => (iso ? faDate.format(parseSafeDate(iso)) : "—");
+export const toJalaliDateTime = (iso?: string) =>
+  iso ? faDateTime.format(parseSafeDate(iso)).replace("،", " —") : "—";
+export const toJalaliLong = (iso?: string) => (iso ? faLong.format(parseSafeDate(iso)) : "—");
+
+export const jalaliYear = (d: Date | string = new Date()) => {
+  const dateObj = parseSafeDate(d);
+  return Number(
     new Intl.DateTimeFormat("en-u-ca-persian", { year: "numeric" })
-      .format(d)
+      .format(dateObj)
       .replace(/[^0-9]/g, ""),
   );
+};
 
 /** تبدیل ISO به مقدار مناسب input[type=datetime-local] */
 export const toLocalInput = (iso?: string) => {
   if (!iso) return "";
-  const d = new Date(iso);
+  const d = parseSafeDate(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : "");
+export const fromLocalInput = (v: string) => {
+  if (!v) return "";
+  const d = parseSafeDate(v);
+  return d.toISOString();
+};
 
 export const hoursBetween = (a: string, b: string) =>
-  (new Date(b).getTime() - new Date(a).getTime()) / 36e5;
+  (parseSafeDate(b).getTime() - parseSafeDate(a).getTime()) / 36e5;
 
-export const isExpired = (endAt: string) => new Date(endAt).getTime() < Date.now();
+export const isExpired = (endAt: string) => parseSafeDate(endAt).getTime() < Date.now();
 
 export const expiresSoon = (endAt: string, withinHours = 4) => {
-  const diff = (new Date(endAt).getTime() - Date.now()) / 36e5;
+  const diff = (parseSafeDate(endAt).getTime() - Date.now()) / 36e5;
   return diff > 0 && diff <= withinHours;
 };
 
