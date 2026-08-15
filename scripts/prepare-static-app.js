@@ -63,6 +63,21 @@ function prepareStaticApp() {
         }
       }
 
+      // Patch dynamic import preloader (yh function) so dynamic routes load directly without failing on webview <link> insertion
+      if (content.includes("vite:preloadError") || content.includes("modulepreload")) {
+        const patchedPreload = content.replace(
+          /var\s+yh\s*=\s*function\s*\(\s*e\s*,\s*t\s*,\s*n\s*\)\s*\{[\s\S]*?return\s+r\.then[\s\S]*?\}\s*;/g,
+          `var yh = function(e, t, n) { return Promise.resolve().then(function() { return e(); }); };`,
+        );
+        if (patchedPreload !== content) {
+          content = patchedPreload;
+          modified = true;
+          console.log(
+            `⚡ Patched dynamic import preloader (direct chunk import) in asset: ${file}`,
+          );
+        }
+      }
+
       // Fix basepath: "." to basepath: "/" so routes match correctly in hash and static modes
       if (content.includes("basepath:`.`") || content.includes('basepath:"."')) {
         const patchedBasepath = content
@@ -168,15 +183,28 @@ function prepareStaticApp() {
           }
         }
 
+        // Handle vite dynamic import preload events gracefully without blocking
+        window.addEventListener('vite:preloadError', function(e) {
+          if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+          }
+          console.warn('PTW: Dynamic import preload event handled safely.');
+        });
+
         // Fallback global error boundary for desktop app / webview debugging
         window.addEventListener('error', function(e) {
           console.error('PTW System Global Error:', e.error || e.message);
-          showErrorScreen(e.message);
+          // Only show error overlay if root is still not rendered
+          var root = document.getElementById('root');
+          if (root && root.querySelector('.ptw-app-loader')) {
+            showErrorScreen(e.message);
+          }
         });
 
         window.addEventListener('unhandledrejection', function(e) {
           console.error('PTW System Promise Rejection:', e.reason);
-          if (e.reason && e.reason.message) {
+          var root = document.getElementById('root');
+          if (root && root.querySelector('.ptw-app-loader') && e.reason && e.reason.message) {
             showErrorScreen(e.reason.message);
           }
         });

@@ -100,8 +100,12 @@ function NewPermit() {
   const [supervisorName, setSupervisorName] = useState("");
   const [startAt, setStartAt] = useState(toLocalInput(new Date().toISOString()));
   const [endAt, setEndAt] = useState("");
-  const [hazards, setHazards] = useState<ChecklistAnswer[]>([]);
-  const [controls, setControls] = useState<ChecklistAnswer[]>([]);
+  const [hazards, setHazards] = useState<ChecklistAnswer[]>(() =>
+    buildChecklist(HAZARDS_BY_TYPE.hot || []),
+  );
+  const [controls, setControls] = useState<ChecklistAnswer[]>(() =>
+    buildChecklist(CONTROLS_BY_TYPE.hot || []),
+  );
   const [extraHazard, setExtraHazard] = useState("");
   const [extraControl, setExtraControl] = useState("");
   const [ppe, setPpe] = useState<string[]>([]);
@@ -112,12 +116,12 @@ function NewPermit() {
   const [locks, setLocks] = useState<LotoLock[]>([]);
 
   useEffect(() => {
-    setHazards(buildChecklist(HAZARDS_BY_TYPE[type]));
-    setControls(buildChecklist(CONTROLS_BY_TYPE[type]));
+    setHazards(buildChecklist(HAZARDS_BY_TYPE[type] || []));
+    setControls(buildChecklist(CONTROLS_BY_TYPE[type] || []));
     setHasLoto(type === "electrical" || type === "confined");
   }, [type]);
 
-  const defaultHoursForType = db.settings.defaultDurationHours?.[type] ?? 8;
+  const defaultHoursForType = db.settings?.defaultDurationHours?.[type] ?? 8;
 
   useEffect(() => {
     if (!ready || !startAt) return;
@@ -125,7 +129,7 @@ function NewPermit() {
     setEndAt(toLocalInput(end.toISOString()));
   }, [type, startAt, ready, defaultHoursForType]);
 
-  const number = useMemo(() => nextPermitNumber(db.permits, jalaliYear()), [db.permits]);
+  const number = useMemo(() => nextPermitNumber(db.permits || [], jalaliYear()), [db.permits]);
 
   const addLock = () =>
     setLocks((l) => [
@@ -314,7 +318,7 @@ function NewPermit() {
                 <SelectValue placeholder="انتخاب کنید" />
               </SelectTrigger>
               <SelectContent>
-                {db.settings.units.map((u) => (
+                {(db.settings?.units || []).map((u) => (
                   <SelectItem key={u} value={u}>
                     {u}
                   </SelectItem>

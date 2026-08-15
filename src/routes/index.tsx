@@ -146,12 +146,7 @@ function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
-            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary border border-primary/20">
-              v1.2.6
-            </span>
-          </div>
+          <h1 className="text-2xl font-bold">داشبورد مجوزهای کار</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {db.settings.companyName} — {db.settings.plantName}
           </p>
@@ -167,7 +162,7 @@ function Dashboard() {
             درباره و به‌روزرسانی‌ها
           </Button>
           <Button asChild size="lg">
-            <Link to="/permits/new">
+            <Link to="/permits/new" preload={false}>
               <FilePlus2 className="size-4" />
               صدور مجوز جدید
             </Link>
@@ -228,7 +223,9 @@ function Dashboard() {
               هنوز هیچ مجوز کاری ثبت نشده است. اولین مجوز را صادر کنید.
             </p>
             <Button asChild>
-              <Link to="/permits/new">صدور اولین مجوز</Link>
+              <Link to="/permits/new" preload={false}>
+                صدور اولین مجوز
+              </Link>
             </Button>
           </CardContent>
         </Card>
