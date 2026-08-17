@@ -157,7 +157,7 @@ function AppContent() {
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold leading-tight">سامانه مجوز کار — PTW</span>
                   <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground border border-primary/30">
-                    v1.2.9
+                    v1.3.0
                   </span>
                 </div>
                 <span className="block text-xs text-sidebar-foreground/70">

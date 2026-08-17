@@ -1,4 +1,5 @@
-import type { MessengerChannel, OtpConfig, Person } from "./types";
+import type { MessengerChannel, OtpConfig, Person, SmsIrConfig } from "./types";
+import { sendOtpSmsIr } from "./sms-ir";
 
 export interface MessengerMeta {
   id: MessengerChannel;
@@ -168,4 +169,19 @@ export async function sendOtpWebhook(
     console.error("OTP Webhook delivery failed:", err);
     return false;
   }
+}
+
+/**
+ * ارسال مستقیم کد OTP از طریق سامانه sms.ir
+ */
+export async function sendOtpThroughSmsIr(
+  smsConfig: SmsIrConfig | undefined,
+  recipient: Person,
+  code: string,
+  stepTitle: string,
+): Promise<{ success: boolean; message: string }> {
+  if (!smsConfig || !smsConfig.enabled || !smsConfig.apiKey) {
+    return { success: false, message: "سامانه sms.ir فعال نشده است." };
+  }
+  return sendOtpSmsIr(smsConfig, recipient, code, stepTitle);
 }

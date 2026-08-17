@@ -13,8 +13,14 @@ import {
   FolderOpen,
   ShieldCheck,
   Info,
+  Workflow,
+  Smartphone,
+  Cpu,
+  Copy,
+  Zap,
 } from "lucide-react";
 import { AboutModal } from "@/components/ptw/about-modal";
+import { N8nIntegrationModal } from "@/components/ptw/n8n-integration-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +67,7 @@ function SettingsPage() {
   const [prefs, setPrefs] = useState<SyncPrefs>(DEFAULT_SYNC_PREFS);
   const [supported, setSupported] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [n8nModalOpen, setN8nModalOpen] = useState(false);
 
   const [initialized, setInitialized] = useState(false);
 
@@ -520,43 +527,116 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <RefreshCw className="size-5 text-primary" />
-            تنظیمات اتصال به n8n و گردش کار خودکار (n8n Webhook Integration)
-          </CardTitle>
+      <Card className="border-primary/30">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Workflow className="size-5 text-primary" />
+              اتصال هوشمند به n8n و سامانه پیامک sms.ir
+            </CardTitle>
+            <Button
+              onClick={() => setN8nModalOpen(true)}
+              variant="default"
+              size="sm"
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm"
+            >
+              <Zap className="size-4" />
+              قالب آماده n8n و تنظیمات پیشرفته
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            با پیکربندی این بخش، تمام رویدادهای ثبت، تغییر وضعیت و امضای مجوزها متصاعدشده (Event:{" "}
-            <code>PermitStatusChanged</code>) و به آدرس وب‌هوک n8n ارسال می‌شود تا اعلان‌ها و
-            فرآیندهای تایید خودکار در پیام‌رسان‌ها / ایمیل انجام پذیرد.
+            با این قابلیت، سامانه مجوز کار به صورت خودکار تمپلیت آماده ورک‌فلو n8n را متناسب با{" "}
+            <strong>تعداد مراحل تایید پرمیت</strong> شما تولید کرده و تمام رویدادها را به صورت
+            مستقیم و وب‌هوک ارسال می‌کند. همچنین پیامک‌های نوبت امضا و کد OTP از طریق وب‌سرویس{" "}
+            <strong>sms.ir</strong> به مسئولین مخابره می‌گردد.
           </p>
+
           <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <Label className="text-xs font-semibold">
-                آدرس وب‌هوک اصلی n8n (N8N_WEBHOOK_URL)
+            <div className="space-y-1.5 rounded-lg border border-border p-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold flex items-center gap-1.5 text-foreground">
+                  <Smartphone className="size-4 text-blue-500" />
+                  سامانه پیامک رسمی sms.ir
+                </Label>
+                <Switch
+                  checked={Boolean(s.smsIr?.enabled)}
+                  onCheckedChange={(v) =>
+                    setS({
+                      ...s,
+                      smsIr: {
+                        ...(s.smsIr || {
+                          enabled: false,
+                          apiKey: "",
+                          lineNumber: "",
+                          sendMode: "verify_pattern",
+                          templateId: "",
+                          parameterNameOtp: "CODE",
+                          parameterNamePermit: "NUMBER",
+                          parameterNameSigner: "NAME",
+                          parameterNameRole: "ROLE",
+                          parameterNameLink: "LINK",
+                        }),
+                        enabled: v,
+                      },
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-1 pt-1">
+                <Label className="text-[11px] text-muted-foreground">
+                  کلید API سامانه sms.ir (x-api-key)
+                </Label>
+                <Input
+                  type="password"
+                  value={s.smsIr?.apiKey || ""}
+                  onChange={(e) =>
+                    setS({
+                      ...s,
+                      smsIr: {
+                        ...(s.smsIr || {
+                          enabled: true,
+                          apiKey: "",
+                          lineNumber: "",
+                          sendMode: "verify_pattern",
+                          templateId: "",
+                        }),
+                        apiKey: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="کلید API دریافت شده از پنل sms.ir"
+                  className="font-mono text-xs dir-ltr text-center"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 rounded-lg border border-border p-3 bg-muted/20">
+              <Label className="text-xs font-bold flex items-center gap-1.5 text-foreground">
+                <Workflow className="size-4 text-primary" />
+                آدرس وب‌هوک شنونده رویدادها در n8n
               </Label>
               <Input
                 value={s.n8nWebhookUrl || ""}
                 onChange={(e) => setS({ ...s, n8nWebhookUrl: e.target.value })}
                 placeholder="https://n8n.your-company.com/webhook/ptw-permit-status-changed"
-                className="mt-1 font-mono text-xs dir-ltr text-right"
+                className="font-mono text-xs dir-ltr text-right"
               />
+              <p className="text-[11px] text-muted-foreground">آدرس وب‌هوک گره اول در تمپلیت n8n</p>
             </div>
-            <div>
-              <Label className="text-xs font-semibold">
-                کلید یا توکن احراز هویت API n8n (N8N_API_KEY)
-              </Label>
-              <Input
-                type="password"
-                value={s.n8nApiKey || ""}
-                onChange={(e) => setS({ ...s, n8nApiKey: e.target.value })}
-                placeholder="ptw_n8n_secret_token_2026"
-                className="mt-1 font-mono text-xs dir-ltr text-center"
-              />
-            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              onClick={() => setN8nModalOpen(true)}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs text-primary border-primary/30"
+            >
+              <Cpu className="size-3.5" />
+              مشاهده و دریافت تمپلیت اختصاصی n8n ({s.workflow?.length || 0} مرحله)
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -858,6 +938,12 @@ function SettingsPage() {
       </Card>
 
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <N8nIntegrationModal
+        open={n8nModalOpen}
+        onClose={() => setN8nModalOpen(false)}
+        settings={s}
+        onUpdateSettings={setS}
+      />
     </div>
   );
 }

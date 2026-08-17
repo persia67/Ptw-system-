@@ -200,6 +200,19 @@ export interface Permit {
   updatedAt: string;
 }
 
+export interface SmsIrConfig {
+  enabled: boolean;
+  apiKey: string;
+  lineNumber?: string;
+  sendMode: "verify_pattern" | "bulk_text";
+  templateId?: string;
+  parameterNameOtp?: string;
+  parameterNamePermit?: string;
+  parameterNameSigner?: string;
+  parameterNameRole?: string;
+  parameterNameLink?: string;
+}
+
 export interface Settings {
   companyName: string;
   plantName: string;
@@ -212,6 +225,8 @@ export interface Settings {
   authConfig?: AuthConfig;
   n8nWebhookUrl?: string;
   n8nApiKey?: string;
+  n8nInstanceUrl?: string;
+  smsIr?: SmsIrConfig;
 }
 
 export interface PtwDatabase {

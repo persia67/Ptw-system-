@@ -1,5 +1,6 @@
 import type { Permit, PermitApproval, PermitStatus, Settings } from "./types";
 import { effectiveSteps } from "./workflow";
+import { sendPermitSmsIrNotification } from "./sms-ir";
 
 /**
  * تولید توکن امنیتی تایید هوشمند (Signed Token) برای لینک‌های بدون لاگین در n8n/پیام‌رسان
@@ -188,6 +189,29 @@ export async function sendN8nPermitStatusWebhook(
     timestamp: new Date().toISOString(),
   };
 
+  // در صورت فعال بودن سامانه sms.ir، پیامک اختصاصی برای مسئول مرحله جاری نیز ارسال می‌شود
+  if (settings?.smsIr?.enabled && settings?.smsIr?.apiKey) {
+    const people = settings.people || [];
+    const targetPerson = people.find(
+      (p) =>
+        p.position &&
+        (p.position.toLowerCase().includes(nextStep?.roleTitle.toLowerCase() || "") ||
+          (nextStep?.roleTitle.toLowerCase() || "").includes(p.position.toLowerCase())),
+    );
+
+    if (targetPerson && targetPerson.phone) {
+      void sendPermitSmsIrNotification(settings.smsIr, targetPerson, {
+        permitNumber: permit.number,
+        permitType: permit.type,
+        roleTitle: nextStep?.roleTitle || "مسئول تایید",
+        stepTitle: nextStep?.title || "بررسی و امضا",
+        companyName: settings.companyName || "PTW",
+        approvalUrl: payload.approval_url,
+        clientUrl: payload.client_link,
+      }).catch((e) => console.warn("SMS.ir auto dispatch notice error:", e));
+    }
+  }
+
   console.log("🚀 Dispatching PermitStatusChanged event to n8n webhook:", webhookUrl, payload);
 
   try {
@@ -209,6 +233,53 @@ export async function sendN8nPermitStatusWebhook(
   } catch (err) {
     console.warn("ارسال مستقیم به n8n ناموفق بود (احتمال عدم دسترسی به شبکه یا آدرس تست):", err);
     return { success: false, message: "خطا در برقراری ارتباط با وب‌هوک n8n" };
+  }
+}
+
+/**
+ * تست ارسال پینگ آزمایشی به وب‌هوک n8n جهت بررسی دسترسی
+ */
+export async function pingN8nWebhook(
+  webhookUrl: string,
+  apiKey?: string,
+): Promise<{ success: boolean; message: string }> {
+  if (!webhookUrl) {
+    return { success: false, message: "آدرس وب‌هوک n8n را وارد نمایید." };
+  }
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-PTW-Event": "PingTest",
+        "X-N8N-API-Key": apiKey || "",
+      },
+      body: JSON.stringify({
+        event: "PingTest",
+        message: "آزمایش ارتباط موفق سامانه مجوز کار PTW با n8n",
+        timestamp: new Date().toISOString(),
+        testData: {
+          number: "PTW-PING-TEST",
+          title: "مجوز آزمایشی تست ارتباط",
+          status: "pending_hse",
+          status_title_fa: "در انتظار بررسی ایمنی",
+        },
+      }),
+    });
+
+    if (res.ok) {
+      return { success: true, message: "ارتباط با وب‌هوک n8n با موفقیت تایید شد (Status 200 OK)." };
+    }
+    return {
+      success: false,
+      message: `وب‌هوک پاسخ داد ولی وضعیت غیراز 200 بود (Status: ${res.status}). آدرس Webhook را بررسی کنید.`,
+    };
+  } catch (err) {
+    console.error("N8N Webhook Ping Error:", err);
+    return {
+      success: false,
+      message: "عدم توانایی در اتصال به وب‌هوک n8n (بررسی صحت URL یا دسترسی شبکه).",
+    };
   }
 }
 

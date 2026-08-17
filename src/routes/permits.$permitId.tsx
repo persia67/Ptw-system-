@@ -21,6 +21,8 @@ import {
   ShieldAlert,
   LogIn,
   UserCheck,
+  Smartphone,
+  Send,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -160,6 +162,29 @@ function PermitDetail() {
   const [handed, setHanded] = useState(true);
   const [clean, setClean] = useState(true);
   const [releaseNote, setReleaseNote] = useState("");
+
+  const [notifying, setNotifying] = useState(false);
+
+  const handleNotifyNextApprover = async () => {
+    if (!permit) return;
+    setNotifying(true);
+    try {
+      const res = await sendN8nPermitStatusWebhook(
+        permit,
+        db.settings,
+        db.settings.currentUser.name,
+      );
+      if (res.success) {
+        toast.success("پیامک اعلان به مسئول مرحله جاری (sms.ir) و وب‌هوک n8n با موفقیت ارسال شد.");
+      } else {
+        toast.info(res.message || "رویداد ارسال شد.");
+      }
+    } catch {
+      toast.error("خطا در ارسال اعلان پیامک یا وب‌هوک");
+    } finally {
+      setNotifying(false);
+    }
+  };
 
   const steps = useMemo(() => (permit ? effectiveSteps(permit) : []), [permit]);
 
@@ -360,6 +385,17 @@ function PermitDetail() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {permit.status === "pending" && (
+            <Button
+              variant="outline"
+              disabled={notifying}
+              onClick={handleNotifyNextApprover}
+              className="gap-1.5 text-xs text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/10 shadow-sm"
+            >
+              <Smartphone className="size-4" />
+              {notifying ? "در حال ارسال پیامک..." : "ارسال پیامک به مسئول مرحله (sms.ir)"}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => navigate({ to: "/" })}>
             <ArrowRight className="size-4" />
             بازگشت

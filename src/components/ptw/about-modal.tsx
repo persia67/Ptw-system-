@@ -26,7 +26,7 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ open, onClose }: AboutModalProps) {
-  const currentVersion = "v1.2.9";
+  const currentVersion = "v1.3.0";
   const githubReleaseUrl = "https://github.com/rafiyanhamid1989/Ptw-system-/releases/latest";
 
   return (
@@ -125,9 +125,27 @@ export function AboutModal({ open, onClose }: AboutModalProps) {
                 <div className="flex items-center justify-between font-bold text-foreground">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="size-3.5 text-primary" />
-                    نسخه v1.2.9 — بهینه‌سازی زنجیره بیلد، مسیردهی و پایداری کامل
+                    نسخه v1.3.0 — یکپارچه‌سازی کامل با n8n و سامانه پیامکی sms.ir
                   </span>
                   <span className="font-mono text-[11px] text-muted-foreground">آخرین نسخه</span>
+                </div>
+                <p className="pt-1 text-muted-foreground leading-relaxed">
+                  • تولید خودکار و داینامیک ورک‌فلوهای n8n متناسب با تعداد مراحل تایید، LOTO و
+                  نقش‌ها با قابلیت خروجی JSON، دانلود مستقیم و ارسال REST API.
+                  <br />
+                  • پشتیبانی از وب‌سرویس پیامکی sms.ir جهت ارسال نوبت امضا و کد OTP (پشتیبانی از
+                  الگوی سریع Fast Pattern و خط اختصاصی).
+                  <br />• افزودن دکمه ارسال پیامک اطلاع‌رسانی به مسئول مرحله جاری در صفحه جزئیات
+                  پرمیت.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                <div className="flex items-center justify-between font-semibold text-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="size-3.5 text-emerald-600" />
+                    نسخه v1.2.9 — بهینه‌سازی زنجیره بیلد، مسیردهی و پایداری کامل
+                  </span>
                 </div>
                 <p className="pt-1 text-muted-foreground leading-relaxed">
                   • تنظیم دقیق ترتیب اجرای اسکریپت‌های بیلد و تولید خروجی استاتیک.
