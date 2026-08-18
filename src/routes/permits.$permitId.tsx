@@ -740,7 +740,10 @@ function PermitDetail() {
                 <Button
                   onClick={() => {
                     const newEnd = fromLocalInput(extendTo);
-                    if (!newEnd || new Date(newEnd) <= new Date(permit.endAt))
+                    if (
+                      !newEnd ||
+                      parseSafeDate(newEnd).getTime() <= parseSafeDate(permit.endAt).getTime()
+                    )
                       return toast.error("تاریخ جدید باید بعد از پایان فعلی باشد");
                     if (!extendReason.trim()) return toast.error("دلیل تمدید را بنویسید");
                     if (!signName.trim()) return toast.error("نام تاییدکننده را وارد کنید");

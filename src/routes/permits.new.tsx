@@ -98,8 +98,11 @@ function NewPermit() {
   const [contractor, setContractor] = useState("");
   const [workers, setWorkers] = useState("");
   const [supervisorName, setSupervisorName] = useState("");
-  const [startAt, setStartAt] = useState(toLocalInput(new Date().toISOString()));
-  const [endAt, setEndAt] = useState("");
+  const [startAt, setStartAt] = useState(() => toLocalInput(new Date().toISOString()));
+  const [endAt, setEndAt] = useState(() => {
+    const end = new Date(Date.now() + 8 * 36e5);
+    return toLocalInput(end.toISOString());
+  });
   const [hazards, setHazards] = useState<ChecklistAnswer[]>(() =>
     buildChecklist(HAZARDS_BY_TYPE.hot || []),
   );
@@ -125,9 +128,11 @@ function NewPermit() {
 
   useEffect(() => {
     if (!ready || !startAt) return;
-    const end = new Date(new Date(startAt).getTime() + defaultHoursForType * 36e5);
+    const start = parseSafeDate(startAt);
+    const end = new Date(start.getTime() + defaultHoursForType * 36e5);
     setEndAt(toLocalInput(end.toISOString()));
-  }, [type, startAt, ready, defaultHoursForType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, defaultHoursForType, ready]);
 
   const number = useMemo(() => nextPermitNumber(db.permits || [], jalaliYear()), [db.permits]);
 
@@ -174,7 +179,9 @@ function NewPermit() {
     if (!supervisorName.trim()) return "نام سرپرست کار را وارد کنید";
     if (!workers.trim()) return "اسامی نفرات مجری را وارد کنید";
     if (!startAt || !endAt) return "بازه زمانی اعتبار مجوز را مشخص کنید";
-    if (new Date(endAt) <= new Date(startAt)) return "پایان اعتبار باید بعد از شروع باشد";
+    if (parseSafeDate(endAt).getTime() <= parseSafeDate(startAt).getTime()) {
+      return "پایان اعتبار باید بعد از شروع باشد";
+    }
     if (hasLoto && locks.length === 0) return "حداقل یک قفل LOTO ثبت کنید";
     return null;
   };
